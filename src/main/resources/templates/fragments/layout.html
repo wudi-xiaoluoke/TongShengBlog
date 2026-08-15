@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<!-- ============ 页头片段：胶带 + 站名 + 导航 + 便利贴 ============ -->
+<header th:fragment="header">
+  <div class="washi"></div>
+  <div class="site-name">同生的手账本</div>
+  <div class="site-sub">想到什么，就写点什么</div>
+  <nav>
+    <a href="/">首页</a>
+    <a href="/notes">手账</a>
+    <a href="/#guest">留言</a>
+    <a href="http://localhost:5173" target="_blank" rel="noopener">商城 ↗</a>
+    <a href="/game">像素零食店</a>
+  </nav>
+  <div class="sticky"><b>致你：</b><br/>最近还好吗？<br/>记得回信哦 ✉️</div>
+</header>
+
+<!-- ============ 页脚片段 ============ -->
+<footer th:fragment="footer">© 2026 同生的手账本 · 一 笔 一 划</footer>
+</html>

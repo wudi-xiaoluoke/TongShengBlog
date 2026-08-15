@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文章管理 — 同生的手账本</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">📖 同生的手账本 · 管理端</div>
+  <div class="right">
+    <a class="cat-link" href="/admin/categories" style="color:#f5eee0;font-size:13px;margin-right:14px;letter-spacing:1px;">分类管理</a>
+    <span class="name">你好，<span th:text="${session.adminUser.nickname}"></span></span>
+    <form method="post" th:action="@{/admin/logout}">
+      <button type="submit">登出</button>
+    </form>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 统计 -->
+  <div class="stats">
+    <div class="stat"><b th:text="${pendingCount}">0</b><div class="lbl">待审核</div></div>
+    <div class="stat"><b th:text="${publishedCount}">0</b><div class="lbl">已发布</div></div>
+    <div class="stat"><b th:text="${rejectedCount}">0</b><div class="lbl">已驳回</div></div>
+  </div>
+
+  <!-- 操作提示 -->
+  <p class="flash" th:if="${flash}" th:text="${flash}"></p>
+
+  <!-- 状态 Tab -->
+  <div class="tabs">
+    <a th:href="@{/admin}" th:classappend="${currentStatus == null} ? 'on'">全部</a>
+    <a th:href="@{/admin(status=0)}" th:classappend="${currentStatus != null && currentStatus == 0} ? 'on'">待审核</a>
+    <a th:href="@{/admin(status=1)}" th:classappend="${currentStatus != null && currentStatus == 1} ? 'on'">已发布</a>
+    <a th:href="@{/admin(status=2)}" th:classappend="${currentStatus != null && currentStatus == 2} ? 'on'">已驳回</a>
+  </div>
+
+  <!-- 文章表格 -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>标题</th><th>昵称</th><th>分类</th><th>状态</th><th>时间</th><th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="a : ${articles}">
+          <td th:text="${a.id}">1</td>
+          <td>
+            <div class="title" th:text="${a.title}">标题</div>
+            <span class="content" th:text="${a.content}"></span>
+            <div class="reason" th:if="${a.rejectReason}" th:text="'驳回原因：' + ${a.rejectReason}"></div>
+          </td>
+          <td th:text="${a.nickname}">同生</td>
+          <td th:text="${a.categoryName ?: '—'}">随笔</td>
+          <td>
+            <span class="badge"
+                  th:classappend="${a.status == 0} ? 'pending' : (${a.status == 1} ? 'published' : 'rejected')"
+                  th:text="${statusLabels[a.status]}">待审核</span>
+          </td>
+          <td>
+            <div class="meta" th:text="${#temporals.format(a.createdAt,'yyyy-MM-dd HH:mm')}">2026-08-09</div>
+          </td>
+          <td>
+            <div class="actions">
+              <!-- 待审核：通过 + 驳回 -->
+              <form class="inline" method="post" th:if="${a.status == 0}"
+                    th:action="@{/admin/article/{id}/approve(id=${a.id})}">
+                <button class="btn ok" type="submit">通过</button>
+              </form>
+              <form class="inline" method="post" th:if="${a.status == 0}"
+                    th:action="@{/admin/article/{id}/reject(id=${a.id})}">
+                <input class="reason" type="text" name="reason" placeholder="原因(可选)">
+                <button class="btn bad" type="submit">驳回</button>
+              </form>
+
+              <!-- 编辑 -->
+              <a class="btn edit" th:href="@{/admin/article/{id}/edit(id=${a.id})}">编辑</a>
+
+              <!-- 删除 -->
+              <form class="inline" method="post"
+                    th:action="@{/admin/article/{id}/delete(id=${a.id})}"
+                    th:attr="onsubmit=|return confirm('确定删除《' + ${#strings.escapeJavaScript(a.title)} + '》吗？');|">
+                <button class="btn del" type="submit">删除</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(articles)}">
+          <td colspan="7" style="text-align:center;color:#b39a77;padding:30px;">这里空空如也～</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

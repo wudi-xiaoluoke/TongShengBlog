@@ -1,0 +1,12 @@
+target/
+*.class
+*.log
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# 本地工作目录（截图/日志/技能会话存档）
+tmp/
+.claude/
+.superpowers/

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>编辑文章 — 同生的手账本</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">📖 同生的手账本 · 管理端</div>
+  <div class="right">
+    <span class="name">你好，<span th:text="${session.adminUser.nickname}"></span></span>
+    <form method="post" th:action="@{/admin/logout}">
+      <button type="submit">登出</button>
+    </form>
+  </div>
+</div>
+
+<div class="container">
+  <div class="edit-box">
+    <p class="flash" th:if="${flash}" th:text="${flash}"></p>
+
+    <form method="post" th:action="@{/admin/article/{id}/update(id=${article.id})}">
+      <label>标题</label>
+      <input type="text" name="title" th:value="${article.title}" maxlength="100" required>
+
+      <label>分类</label>
+      <select name="categoryId">
+        <option value="">无分类</option>
+        <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"
+                th:selected="${article.categoryId != null && c.id == article.categoryId}"></option>
+      </select>
+
+      <label>内容</label>
+      <p class="hint">支持 Markdown：**加粗**、- 列表、| 表格 |、``` 代码块、[链接](url)</p>
+      <textarea name="content" maxlength="5000" required th:text="${article.content}"></textarea>
+
+      <div class="bar">
+        <button class="btn save" type="submit">保 存</button>
+        <a class="back-link" href="/admin">← 返回列表（保存后状态回到待审核）</a>
+      </div>
+    </form>
+  </div>
+</div>
+</body>
+</html>

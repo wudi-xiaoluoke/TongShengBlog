@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分类管理 — 同生的手账本</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">📖 同生的手账本 · 管理端</div>
+  <div class="right">
+    <a href="/admin" style="color:#f5eee0;font-size:13px;margin-right:14px;letter-spacing:1px;">← 文章管理</a>
+    <span class="name">你好，<span th:text="${session.adminUser.nickname}"></span></span>
+    <form method="post" th:action="@{/admin/logout}">
+      <button type="submit">登出</button>
+    </form>
+  </div>
+</div>
+
+<div class="container">
+
+  <p class="flash" th:if="${flash}" th:text="${flash}"></p>
+
+  <!-- 新增分类 -->
+  <div class="edit-box" style="margin-bottom:22px;">
+    <form method="post" th:action="@{/admin/categories/create}">
+      <label>新增分类</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input type="text" name="name" placeholder="分类名称（必填）" maxlength="30" required style="flex:2;min-width:140px;">
+        <input type="text" name="description" placeholder="描述（可选）" maxlength="100" style="flex:2;min-width:140px;">
+        <input type="number" name="sort" value="0" placeholder="排序" style="flex:1;min-width:80px;">
+        <button class="btn save" type="submit" style="flex:none;">+ 新增</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 分类列表 + 行内编辑（输入框用 form 属性关联到对应保存表单） -->
+  <div class="table-wrap">
+    <table class="category-table">
+      <colgroup>
+        <col class="category-col-sort">
+        <col class="category-col-name">
+        <col class="category-col-description">
+        <col class="category-col-actions">
+      </colgroup>
+      <thead>
+        <tr><th>排序</th><th>名称</th><th>描述</th><th>操作</th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="c : ${categories}">
+          <td><input class="category-sort-input" form="upd-${c.id}" type="number" name="sort" th:value="${c.sort}"></td>
+          <td><input class="category-name-input" form="upd-${c.id}" type="text" name="name" th:value="${c.name}" maxlength="30" required></td>
+          <td><input class="category-description-input" form="upd-${c.id}" type="text" name="description" th:value="${c.description}" maxlength="100"></td>
+          <td>
+            <div class="actions category-actions">
+              <form id="upd-${c.id}" class="inline" method="post" th:action="@{/admin/categories/{id}/update(id=${c.id})}">
+                <button class="btn edit" type="submit">保存</button>
+              </form>
+              <form class="inline" method="post" th:action="@{/admin/categories/{id}/delete(id=${c.id})}"
+                    th:attr="onsubmit=|return confirm('确定删除分类「' + ${#strings.escapeJavaScript(c.name)} + '」吗？其下文章将变为无分类。');|">
+                <button class="btn del" type="submit">删除</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(categories)}">
+          <td colspan="4" style="text-align:center;color:#b39a77;padding:30px;">还没有分类，先在上方新增一个吧～</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

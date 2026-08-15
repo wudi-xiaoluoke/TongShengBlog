@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>同生的手账本 — 手写手账</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#faf3e3;color:#5a4632;font-family:"KaiTi","STKaiti","Kaiti SC","PingFang SC",cursive;line-height:1.9}
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px}
+  header{text-align:center;padding:56px 0 18px;position:relative}
+  .washi{position:absolute;top:36px;left:50%;width:180px;height:26px;transform:translateX(-50%) rotate(-2deg);background:repeating-linear-gradient(45deg,#f0c8d0 0 14px,#e8b4c4 14px 20px);opacity:.7}
+  .site-name{font-size:32px;letter-spacing:8px;font-weight:bold}
+  .site-sub{font-size:13px;color:#a08a6b;letter-spacing:3px;margin-top:8px}
+  nav{margin-top:26px;display:flex;justify-content:center;gap:20px;flex-wrap:wrap}
+  nav a{color:#8a7355;text-decoration:none;font-size:14px;letter-spacing:2px;padding:4px 12px;border-bottom:2px dashed #d9c8a8;transition:.2s}
+  nav a:hover{color:#d1662f}
+  .sticky{position:absolute;right:6px;top:70px;background:#fff9c4;box-shadow:2px 4px 8px rgba(90,70,50,.18);padding:14px 16px;transform:rotate(6deg);font-size:13px;width:130px;z-index:3}
+  .sticky:before{content:'';position:absolute;top:-8px;left:20px;width:70px;height:18px;background:rgba(255,255,255,.55)}
+  .sticky b{color:#d1662f}
+  .hero{padding:40px 0 16px;text-align:center}
+  .hero .b{font-size:clamp(24px,4.5vw,34px);letter-spacing:3px}
+  .hero .s{color:#a08a6b;font-size:14px;margin-top:12px}
+  .posts{padding:14px 0 36px}
+  .note{background:#fffdf4;border:1px solid #eadcc0;padding:26px 26px 22px;margin-bottom:24px;box-shadow:2px 3px 0 rgba(90,70,50,.12);position:relative;transition:.25s;cursor:pointer}
+  .note:nth-child(even){transform:rotate(1deg)}
+  .note:nth-child(odd){transform:rotate(-.8deg)}
+  .note:hover{transform:rotate(0) translateY(-4px)}
+  .note .date{font-size:12px;color:#b39a77;letter-spacing:1px}
+  .note h3{font-size:20px;margin:10px 0 10px;letter-spacing:1px}
+  .note p{font-size:14.5px;color:#7a6244;line-height:2}
+  .note .mark{background:linear-gradient(transparent 62%,#ffe08a 62%);padding:0 4px}
+  .note .del{text-decoration:line-through;color:#b39a77}
+  .note .tag{display:inline-block;margin-top:12px;font-size:12px;color:#d1662f;border:1px dashed #d1662f;padding:2px 12px;border-radius:999px}
+  .note .tape2{position:absolute;top:-12px;left:38%;width:90px;height:22px;background:rgba(245,235,205,.8);transform:rotate(-3deg)}
+  .wishes{display:flex;gap:16px;flex-wrap:wrap;padding:8px 0 40px;justify-content:center}
+  .card{background:#fff9c4;width:180px;padding:20px;transform:rotate(var(--r,0deg));box-shadow:2px 4px 10px rgba(90,70,50,.15);position:relative}
+  .card:nth-child(1){--r:-3deg;background:#fff3b0}
+  .card:nth-child(2){--r:2deg;background:#ffe0ec}
+  .card:nth-child(3){--r:-1deg;background:#d6f5d6}
+  .card p{font-size:14px;line-height:1.9;color:#6b5638}
+  .card .who{font-size:12px;color:#b39a77;margin-top:10px;text-align:right}
+  .guest{text-align:center;background:#fffdf4;border:1px dashed #d9c8a8;padding:24px;margin-bottom:44px}
+  .guest .t{font-size:16px;letter-spacing:3px}
+  .guest p{color:#a08a6b;font-size:13px;margin-top:8px}
+  footer{text-align:center;padding:10px 0 54px;color:#b39a77;font-size:12px;letter-spacing:3px}
+  @media (max-width:640px){.sticky{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="washi"></div>
+    <div class="site-name">同生的手账本</div>
+    <div class="site-sub">想到什么，就写点什么</div>
+    <nav><a href="#">首页</a><a href="#">手账</a><a href="#">便签</a><a href="#">关于</a></nav>
+    <div class="sticky"><b>致你：</b><br>最近还好吗？<br>记得回信哦 ✉️</div>
+  </header>
+
+  <div class="hero">
+    <div class="b">今天，也认真过了一天 ✎</div>
+    <div class="s">—— 同生 · 手写于 2026.08.09</div>
+  </div>
+
+  <div class="posts">
+    <div class="note">
+      <span class="tape2"></span>
+      <div class="date">2026.08.02 · 天气晴</div>
+      <h3>写给五年后的自己</h3>
+      <p>亲爱的未来的我：<br>今天的天空很蓝，窗外的猫在睡觉。我把此刻的心情写在纸上，<span class="mark">希望你拆开的时候，还能闻到阳光的味道</span>。对了，<span class="del">别熬夜了</span>——这句话每年写给你，希望今年你能做到。</p>
+      <span class="tag">随笔</span>
+    </div>
+
+    <div class="note">
+      <span class="tape2"></span>
+      <div class="date">2026.07.18 · 天气多云</div>
+      <h3>西湖边的三个黄昏</h3>
+      <p>第一个黄昏，我在看落日；第二个黄昏，我在看人群；第三个黄昏，我<span class="mark">学会了什么都不做</span>。原来发呆，也是一种充电。</p>
+      <span class="tag">旅行</span>
+    </div>
+
+    <div class="note">
+      <span class="tape2"></span>
+      <div class="date">2026.06.30 · 深夜</div>
+      <h3>关于「慢下来」的思考</h3>
+      <p>今天决定：<span class="del">一定要更快</span> ❌<br>改成：慢慢来，比较快 ✔️<br>——写在备忘录里，也写给自己。</p>
+      <span class="tag">思考</span>
+    </div>
+  </div>
+
+  <div class="wishes">
+    <div class="card"><p>「愿你三冬暖，愿你春不寒。」</p><div class="who">—— 老周</div></div>
+    <div class="card"><p>「读书，行走，然后慢慢生活。」</p><div class="who">—— 小鹿</div></div>
+    <div class="card"><p>「别怕，慢慢来。」</p><div class="who">—— 同生</div></div>
+  </div>
+
+  <div class="guest">
+    <div class="t">📝 给我留言</div>
+    <p>像从前一样，在小本本上留下你想说的话吧。</p>
+  </div>
+
+  <footer>© 2026 同生的手账本 · 一 笔 一 划</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="${article.title} + ' — 同生的手账本'">文章详情</title>
+  <link rel="stylesheet" th:href="@{/css/home.css}">
+  <link rel="stylesheet" th:href="@{/css/highlight.min.css}">
+</head>
+<body>
+<div class="wrap">
+
+  <header th:replace="~{fragments/layout :: header}"></header>
+
+  <div class="detail">
+    <div class="date" th:text="${#temporals.format(article.publishTime,'yyyy.MM.dd')}"></div>
+    <h1 th:text="${article.title}"></h1>
+    <div class="meta">
+      <span th:text="'✍ ' + ${article.nickname}"></span>
+      <span th:if="${article.categoryId}" th:text="${article.categoryName}"></span>
+      <span class="views">
+        <svg class="views-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        <span th:text="${article.views}"></span>
+      </span>
+    </div>
+    <!-- 注意：只能 th:utext 已净化的 contentHtml，绝不能用原始 content -->
+    <div class="body markdown-body" th:utext="${article.contentHtml}"></div>
+  </div>
+
+  <p class="back"><a href="/">← 回到小本本</a></p>
+
+  <footer th:replace="~{fragments/layout :: footer}"></footer>
+</div>
+
+<script th:src="@{/js/highlight.min.js}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.markdown-body pre code').forEach(function (block) {
+      hljs.highlightElement(block);
+    });
+  });
+</script>
+</body>
+</html>
