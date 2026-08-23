@@ -1,7 +1,7 @@
 /** 手账书：纯逻辑，可被 Node 测试（tests/notes-book.test.mjs） */
 
 export function jumpTransitionTiming() {
-  return Object.freeze({ closeMs: 380, holdMs: 220, openMs: 430 });
+  return Object.freeze({ closeMs: 380, holdMs: 300, openMs: 430 });
 }
 
 /** 把索引限制在 [0, total-1]；total<=0 时返回 0 */
@@ -129,4 +129,11 @@ export function shouldHandleHorizontalDrag(deltaX, deltaY, threshold = 8) {
 
 export function isCurrentInteraction(token, currentToken, expectedSheet, currentSheet) {
   return token === currentToken && expectedSheet != null && expectedSheet === currentSheet;
+}
+
+export function waitForMinimumAndData(dataPromise, minimumMs, wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))) {
+  return Promise.all([
+    Promise.resolve(dataPromise),
+    wait(Math.max(0, minimumMs)),
+  ]);
 }

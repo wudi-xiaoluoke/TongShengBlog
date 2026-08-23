@@ -24,6 +24,7 @@ import {
   shouldHandleHorizontalDrag,
   isCurrentInteraction,
   jumpTransitionTiming,
+  waitForMinimumAndData,
 } from '../src/main/resources/static/js/notes-logic.mjs';
 
 test('jump close hides page faces edge-on while the book is closed', () => {
@@ -35,6 +36,90 @@ test('jump close hides page faces edge-on while the book is closed', () => {
   assert.match(css, /\.book\.js\.jump-closing \.book-page\.left,[\s\S]*?\.book\.js\.jump-closed \.book-cover\.left\s*\{\s*transform:\s*rotateY\(90deg\);\s*\}/);
   assert.match(css, /\.book\.js\.jump-closing \.book-page\.right,[\s\S]*?\.book\.js\.jump-closed \.book-cover\.right\s*\{\s*transform:\s*rotateY\(-90deg\);\s*\}/);
   assert.match(css, /\.book\.js\.jump-closed \.book-page,\s*\.book\.js\.jump-closed \.book-cover\s*\{[^}]*transition:\s*none;[^}]*opacity:\s*0;[^}]*\}/);
+});
+
+test('closed jump presents a vertical layered page edge', () => {
+  const css = readFileSync(
+    new URL('../src/main/resources/static/css/notes.css', import.meta.url),
+    'utf8',
+  );
+  const block = css.match(/\.book-page-block\s*\{([^}]*)\}/)?.[1] ?? '';
+
+  assert.match(block, /left:\s*50%/);
+  assert.match(block, /top:\s*3%/);
+  assert.match(block, /bottom:\s*3%/);
+  assert.match(block, /width:\s*90px/);
+  assert.doesNotMatch(block, /height:/);
+  assert.match(css, /\.book\.js\.jump-closing \.book-spine,[\s\S]*?\.book\.js\.jump-opening \.book-spine\s*\{\s*opacity:\s*0;/);
+});
+
+test('regular, empty, and temporary pages all fill their half of the book', () => {
+  const css = readFileSync(
+    new URL('../src/main/resources/static/css/notes.css', import.meta.url),
+    'utf8',
+  );
+  const pageInner = css.match(/\.page-inner\s*\{\s*position:\s*relative;([^}]*)\}/)?.[1] ?? '';
+
+  assert.match(pageInner, /width:\s*100%/);
+  assert.match(css, /\.turn-face \.page-inner\s*\{\s*width:\s*100%;\s*\}/);
+
+  const template = readFileSync(
+    new URL('../src/main/resources/templates/notes/index.html', import.meta.url),
+    'utf8',
+  );
+  assert.match(template, /book-page right is-empty/);
+  assert.doesNotMatch(template, /book-page right empty/);
+});
+
+test('every spread keeps a stable book height regardless of its content', () => {
+  const css = readFileSync(
+    new URL('../src/main/resources/static/css/notes.css', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(css, /\.book-spread\s*\{[^}]*height:\s*640px;[^}]*\}/);
+  assert.match(css, /@media \(max-width:\s*720px\)[\s\S]*?\.book-spread\s*\{\s*height:\s*430px;\s*\}/);
+});
+
+test('page halves meet cleanly at the spine without a decorative gap', () => {
+  const css = readFileSync(
+    new URL('../src/main/resources/static/css/notes.css', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(css, /\.book-page\.left\s*\{\s*padding-right:\s*0;\s*\}/);
+  assert.match(css, /\.book-page\.right\s*\{\s*padding-left:\s*0;\s*\}/);
+  assert.match(css, /\.book-page\.left \.page-inner,[\s\S]*?border-radius:\s*9px 0 0 9px;/);
+  assert.match(css, /\.book-page\.right \.page-inner,[\s\S]*?border-radius:\s*0 9px 9px 0;/);
+});
+
+test('turning faces use scoped class names that cannot inherit global back styles', () => {
+  const css = readFileSync(
+    new URL('../src/main/resources/static/css/notes.css', import.meta.url),
+    'utf8',
+  );
+  const script = readFileSync(
+    new URL('../src/main/resources/static/js/notes.mjs', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(css, /\.turn-face\.turn-back\s*\{\s*transform:\s*rotateY\(180deg\);\s*\}/);
+  assert.match(script, /face\(pageData\(fromIndex, frontSide\), 'turn-front', frontSide\)/);
+  assert.match(script, /face\(pageData\(targetIndex, backSide\), 'turn-back', backSide\)/);
+  assert.doesNotMatch(script, /face\([^\n]+, 'back',/);
+});
+
+test('jump destination label is centered above the book', () => {
+  const css = readFileSync(
+    new URL('../src/main/resources/static/css/notes.css', import.meta.url),
+    'utf8',
+  );
+  const label = css.match(/\.jump-label\s*\{([^}]*)\}/)?.[1] ?? '';
+
+  assert.match(label, /left:\s*50%/);
+  assert.match(label, /top:\s*-48px/);
+  assert.match(label, /width:\s*240px/);
+  assert.match(label, /text-align:\s*center/);
 });
 
 test('clamps an index into the valid range', () => {
@@ -215,7 +300,52 @@ test('accepts animation completion only for the current token and sheet', () => 
 test('confirmed close uses the notes book jump transition timing', () => {
   assert.deepEqual(jumpTransitionTiming(), {
     closeMs: 380,
-    holdMs: 220,
+    holdMs: 300,
     openMs: 430,
   });
+});
+
+test('book opening waits for both minimum closed time and data readiness', async () => {
+  let releaseData;
+  const data = new Promise((resolve) => { releaseData = resolve; });
+  let releaseMinimum;
+  const wait = () => new Promise((resolve) => { releaseMinimum = resolve; });
+  let opened = false;
+
+  const gate = waitForMinimumAndData(data, 300, wait).then(() => { opened = true; });
+  releaseMinimum();
+  await Promise.resolve();
+  assert.equal(opened, false);
+  releaseData();
+  await gate;
+  assert.equal(opened, true);
+
+  const timing = jumpTransitionTiming();
+  assert.equal(timing.holdMs, 300);
+});
+
+test('notes modules are cache-busted as one compatible release', () => {
+  const template = readFileSync(
+    new URL('../src/main/resources/templates/notes/index.html', import.meta.url),
+    'utf8',
+  );
+  const script = readFileSync(
+    new URL('../src/main/resources/static/js/notes.mjs', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(template, /@\{\/js\/notes\.mjs\(v='20260823-4'\)\}/);
+  assert.match(script, /from '\.\/notes-logic\.mjs\?v=20260823-4';/);
+});
+
+test('target pages are laid out closed before the opening transition starts', () => {
+  const script = readFileSync(
+    new URL('../src/main/resources/static/js/notes.mjs', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(
+    script,
+    /activate\(target\);\s*const targetSpread = spreads\[target\];\s*void targetSpread\.offsetWidth;\s*requestAnimationFrame\(\(\) => \{/,
+  );
 });

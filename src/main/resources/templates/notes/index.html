@@ -89,7 +89,7 @@
         </section>
 
         <!-- 右页为空（最后奇数个月）：封底 -->
-        <section class="book-page right empty" th:unless="${sp.right != null}">
+        <section class="book-page right is-empty" th:unless="${sp.right != null}">
           <div class="page-inner">
             <div class="cover-text">未完待续 ✎</div>
           </div>
@@ -133,6 +133,6 @@
 
   <footer th:replace="~{fragments/layout :: footer}"></footer>
 </div>
-<script th:src="@{/js/notes.mjs}" type="module"></script>
+<script th:src="@{/js/notes.mjs(v='20260823-4')}" type="module"></script>
 </body>
 </html>

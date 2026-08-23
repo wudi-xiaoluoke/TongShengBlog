@@ -18,7 +18,8 @@ import {
   shouldUseSimpleMotion,
   shouldHandleHorizontalDrag,
   jumpTransitionTiming,
-} from './notes-logic.mjs';
+  waitForMinimumAndData,
+} from './notes-logic.mjs?v=20260823-4';
 
 const TURN_MS = 700;
 const { closeMs: CLOSE_MS, holdMs: HOLD_MS, openMs: OPEN_MS } = jumpTransitionTiming();
@@ -295,12 +296,12 @@ function buildTurnLayers(fromIndex, targetIndex, direction) {
   const sheet = document.createElement('div');
   sheet.className = `turning-sheet ${direction}`;
   sheet.append(
-    face(pageData(fromIndex, frontSide), 'front', frontSide),
-    face(pageData(targetIndex, backSide), 'back', backSide),
+    face(pageData(fromIndex, frontSide), 'turn-front', frontSide),
+    face(pageData(targetIndex, backSide), 'turn-back', backSide),
   );
   const reveal = document.createElement('div');
   reveal.className = `reveal-layer ${direction}`;
-  reveal.append(face(pageData(targetIndex, revealSide), 'front', revealSide));
+  reveal.append(face(pageData(targetIndex, revealSide), 'turn-front', revealSide));
   makeTemporaryLayerInert(sheet);
   makeTemporaryLayerInert(reveal);
   return { sheet, reveal };
@@ -334,6 +335,7 @@ function jumpTo(i, label) {
   }
 
   const token = ++state.jumpToken;
+  const dataReady = prepareSpreadData(target);
   state.targetIndex = target;
   state.phase = 'closing';
   if (jumpLabel) jumpLabel.textContent = `翻到 · ${label || `第 ${target + 1} 页`}`;
@@ -347,24 +349,27 @@ function jumpTo(i, label) {
     state.phase = 'closed';
     book.classList.remove('jump-closing');
     book.classList.add('jump-closed');
-    activate(target);
-
-    setTimeout(() => {
+    waitForMinimumAndData(dataReady, HOLD_MS).then(() => {
       if (!isCurrentJump(token, target)) return;
-      state.phase = 'opening';
+      activate(target);
       const targetSpread = spreads[target];
-      const openingElements = [
-        ...targetSpread.querySelectorAll('.book-page'),
-        ...book.querySelectorAll(':scope > .book-cover'),
-      ];
-      state.jumpTransitionCleanup = watchTransformTransitions(
-        openingElements,
-        () => finishJump(token, target),
-        OPEN_MS,
-      );
-      book.classList.remove('jump-closed');
-      book.classList.add('jump-opening');
-    }, HOLD_MS);
+      void targetSpread.offsetWidth;
+      requestAnimationFrame(() => {
+        if (!isCurrentJump(token, target)) return;
+        state.phase = 'opening';
+        const openingElements = [
+          ...targetSpread.querySelectorAll('.book-page'),
+          ...book.querySelectorAll(':scope > .book-cover'),
+        ];
+        state.jumpTransitionCleanup = watchTransformTransitions(
+          openingElements,
+          () => finishJump(token, target),
+          OPEN_MS,
+        );
+        book.classList.remove('jump-closed');
+        book.classList.add('jump-opening');
+      });
+    });
   };
   state.jumpTransitionCleanup = watchTransformTransitions(
     closingElements,
@@ -373,10 +378,21 @@ function jumpTo(i, label) {
   );
   book.classList.add('jumping', 'jump-closing');
 
-  setTimeout(
-    () => finishJump(token, target),
-    fallbackDelay(CLOSE_MS + HOLD_MS + OPEN_MS, FALLBACK_MS),
-  );
+}
+
+function prepareSpreadData(target) {
+  const targetSpread = spreads[target];
+  if (!targetSpread) return Promise.resolve();
+  const images = [...targetSpread.querySelectorAll('img')];
+  const imageReady = images.map((img) => {
+    if (img.complete) return Promise.resolve();
+    return new Promise((resolve) => {
+      img.addEventListener('load', resolve, { once: true });
+      img.addEventListener('error', resolve, { once: true });
+    });
+  });
+  const fontsReady = document.fonts?.ready ?? Promise.resolve();
+  return Promise.all([fontsReady, ...imageReady]);
 }
 
 function fadeTo(target) {
@@ -565,13 +581,13 @@ function onDocumentKeyDown(event) {
 function pageData(spreadIndex, side) {
   const page = spreads[spreadIndex]?.querySelector(`.book-page.${side}`);
   const inner = page?.querySelector('.page-inner');
-  return temporaryPageData(inner?.innerHTML ?? null, page?.classList.contains('empty') ?? false);
+  return temporaryPageData(inner?.innerHTML ?? null, page?.classList.contains('is-empty') ?? false);
 }
 
 function face(page, faceClass, side) {
   const element = document.createElement('div');
   element.className = `turn-face ${faceClass} ${side}`;
-  if (page.empty) element.classList.add('empty');
+  if (page.empty) element.classList.add('is-empty');
   const inner = document.createElement('div');
   inner.className = 'page-inner';
   inner.innerHTML = page.html ?? '<div class="cover-text">未完待续 ✎</div>';
