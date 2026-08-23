@@ -1,5 +1,9 @@
 /** 手账书：纯逻辑，可被 Node 测试（tests/notes-book.test.mjs） */
 
+export function jumpTransitionTiming() {
+  return Object.freeze({ closeMs: 380, holdMs: 220, openMs: 430 });
+}
+
 /** 把索引限制在 [0, total-1]；total<=0 时返回 0 */
 export function clamp(i, total) {
   if (total <= 0) return 0;

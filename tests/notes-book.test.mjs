@@ -22,6 +22,7 @@ import {
   shouldUseSimpleMotion,
   shouldHandleHorizontalDrag,
   isCurrentInteraction,
+  jumpTransitionTiming,
 } from '../src/main/resources/static/js/notes-logic.mjs';
 
 test('clamps an index into the valid range', () => {
@@ -197,4 +198,12 @@ test('accepts animation completion only for the current token and sheet', () => 
   assert.equal(isCurrentInteraction(3, 4, sheet, sheet), false);
   assert.equal(isCurrentInteraction(4, 4, sheet, replacement), false);
   assert.equal(isCurrentInteraction(4, 4, sheet, null), false);
+});
+
+test('confirmed close uses the notes book jump transition timing', () => {
+  assert.deepEqual(jumpTransitionTiming(), {
+    closeMs: 380,
+    holdMs: 220,
+    openMs: 430,
+  });
 });

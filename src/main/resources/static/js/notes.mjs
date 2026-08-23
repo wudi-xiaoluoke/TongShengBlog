@@ -17,12 +17,11 @@ import {
   pageMenuDecision,
   shouldUseSimpleMotion,
   shouldHandleHorizontalDrag,
+  jumpTransitionTiming,
 } from './notes-logic.mjs';
 
 const TURN_MS = 700;
-const CLOSE_MS = 420;
-const HOLD_MS = 280;
-const OPEN_MS = 480;
+const { closeMs: CLOSE_MS, holdMs: HOLD_MS, openMs: OPEN_MS } = jumpTransitionTiming();
 const FALLBACK_MS = 120;
 const MIN_DRAG_PX = 8;
 const FADE_HALF_MS = 80;
