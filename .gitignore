@@ -10,3 +10,4 @@ target/
 tmp/
 .claude/
 .superpowers/
+.worktrees/
