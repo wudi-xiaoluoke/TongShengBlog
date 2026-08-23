@@ -79,18 +79,35 @@
 }
 .book-page-block {
   position: absolute;
-  left: calc(50% - 10px);
-  top: 7%;
-  bottom: 7%;
-  width: 20px;
-  z-index: 4;
-  border: 1px solid var(--notes-edge);
-  border-radius: 3px;
-  background: repeating-linear-gradient(0deg, #f8efde 0 2px, #eadcc0 2px 3px);
-  box-shadow: 0 5px 12px rgba(90, 55, 35, .2);
+  left: 50%;
+  top: -5px;
+  bottom: -7px;
+  width: clamp(28px, 4.2vw, 36px);
+  z-index: 6;
+  box-sizing: border-box;
+  border: 2px solid var(--notes-dark);
+  border-radius: 5px;
+  background:
+    linear-gradient(90deg, rgba(90, 55, 35, .24), transparent 25%, transparent 75%, rgba(90, 55, 35, .24)),
+    repeating-linear-gradient(0deg, #fff9ed 0 2px, #e7d6b8 2px 3px);
+  box-shadow: 0 7px 14px rgba(90, 55, 35, .24), inset 0 0 0 1px rgba(255, 255, 255, .72);
   opacity: 0;
+  transform: translateX(-50%) scaleX(.72);
+  transition: opacity 80ms, transform 80ms;
   pointer-events: none;
 }
+.book-page-block::before,
+.book-page-block::after {
+  content: '';
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  height: 7px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--notes-dark), #bd7a57 48%, var(--notes-dark));
+}
+.book-page-block::before { top: -4px; }
+.book-page-block::after { bottom: -4px; }
 
 /* Legacy page visibility is required by the current notes script. */
 .book.js .book-spread { display: none; }
@@ -124,24 +141,43 @@
 .book.js.closing .book-cover { transition-duration: 420ms; }
 
 /* Page jumps close both halves first, swap only while closed, then open. */
+.book.js.jump-closing .book-spread,
+.book.js.jump-closed .book-spread,
+.book.js.jump-opening .book-spread { transform-style: preserve-3d; }
 .book.js.jump-closing .book-page,
-.book.js.jump-closing .book-cover { transition-duration: 420ms; }
+.book.js.jump-closing .book-cover { transition: transform 380ms cubic-bezier(.42, 0, .72, 1); }
 .book.js.jump-closing .book-page.left,
 .book.js.jump-closing .book-cover.left,
 .book.js.jump-closed .book-page.left,
-.book.js.jump-closed .book-cover.left { transform: rotateY(88deg); }
+.book.js.jump-closed .book-cover.left { transform: rotateY(86deg); }
 .book.js.jump-closing .book-page.right,
 .book.js.jump-closing .book-cover.right,
 .book.js.jump-closed .book-page.right,
-.book.js.jump-closed .book-cover.right { transform: rotateY(-88deg); }
+.book.js.jump-closed .book-cover.right { transform: rotateY(-86deg); }
 .book.js.jump-closed .book-page,
 .book.js.jump-closed .book-cover { transition: none; }
 .book.js.jump-opening .book-page,
 .book.js.jump-opening .book-cover {
   transform: rotateY(0);
-  transition-duration: 480ms;
+  transition: transform 430ms cubic-bezier(.22, .68, .3, 1);
 }
-.book.js.jump-closed .book-page-block { opacity: 1; }
+.book.js.jump-closing .book-page-block {
+  opacity: 1;
+  transform: translateX(-50%) scaleX(1);
+  transition: opacity 80ms 300ms, transform 80ms 300ms;
+}
+.book.js.jump-closed .book-page-block {
+  opacity: 1;
+  transform: translateX(-50%) scaleX(1);
+  transition: none;
+}
+.book.js.jump-opening .book-page-block {
+  opacity: 0;
+  transform: translateX(-50%) scaleX(.72);
+  transition-delay: 0ms;
+}
+.book.js.jump-closing .book-page .page-inner,
+.book.js.jump-closed .book-page .page-inner { box-shadow: 0 2px 4px rgba(90, 58, 38, .12); }
 
 /* Warm paper, gentle inner-gutter shading, and staggered outer page edges. */
 .page-inner {
@@ -383,13 +419,18 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.book.jump-closed .jump-label { opacity: 1; }
+.book.jump-closed .jump-label { z-index: 7; opacity: 1; }
 
 @media (max-width: 720px) {
   .book-wrap { padding: 0 4px; }
   .book-surface { padding: 18px 4px 28px; }
   .book-cover { top: -5px; bottom: -7px; }
   .book-spine { top: -6px; bottom: -6px; }
+  .book-page-block {
+    top: -3px;
+    bottom: -5px;
+    width: clamp(24px, 6vw, 30px);
+  }
   .book-page { padding: 0 !important; }
   .page-inner { min-height: 330px; padding: 14px 10px 20px; }
   .month-title { margin-bottom: 9px; padding-bottom: 6px; font-size: 13px; letter-spacing: 1px; }
