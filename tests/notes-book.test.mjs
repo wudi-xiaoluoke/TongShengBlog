@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import {
   clamp,
@@ -24,6 +25,17 @@ import {
   isCurrentInteraction,
   jumpTransitionTiming,
 } from '../src/main/resources/static/js/notes-logic.mjs';
+
+test('jump close hides page faces edge-on while the book is closed', () => {
+  const css = readFileSync(
+    new URL('../src/main/resources/static/css/notes.css', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(css, /\.book\.js\.jump-closing \.book-page\.left,[\s\S]*?\.book\.js\.jump-closed \.book-cover\.left\s*\{\s*transform:\s*rotateY\(90deg\);\s*\}/);
+  assert.match(css, /\.book\.js\.jump-closing \.book-page\.right,[\s\S]*?\.book\.js\.jump-closed \.book-cover\.right\s*\{\s*transform:\s*rotateY\(-90deg\);\s*\}/);
+  assert.match(css, /\.book\.js\.jump-closed \.book-page,\s*\.book\.js\.jump-closed \.book-cover\s*\{[^}]*transition:\s*none;[^}]*opacity:\s*0;[^}]*\}/);
+});
 
 test('clamps an index into the valid range', () => {
   assert.equal(clamp(0, 5), 0);
