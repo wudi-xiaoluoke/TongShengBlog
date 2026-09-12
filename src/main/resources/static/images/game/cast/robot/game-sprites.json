@@ -1,0 +1,36 @@
+{
+  "width": 96,
+  "height": 96,
+  "anchor": [
+    48,
+    91
+  ],
+  "atlas": [
+    1536,
+    576
+  ],
+  "directions": [
+    "north",
+    "south",
+    "west",
+    "east"
+  ],
+  "walk": {
+    "rows": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "frames": 16,
+    "frameMs": 50
+  },
+  "idle": {
+    "row": 4,
+    "columns": "directions"
+  },
+  "reach": {
+    "row": 5,
+    "columns": "directions"
+  }
+}

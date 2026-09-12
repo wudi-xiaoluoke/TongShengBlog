@@ -1,0 +1,19 @@
+{
+  "id": "archer",
+  "width": 96,
+  "height": 96,
+  "anchor": [
+    48,
+    91
+  ],
+  "frames": 16,
+  "frameMs": 50,
+  "cycleMs": 800,
+  "directions": [
+    "north",
+    "south",
+    "west",
+    "east"
+  ],
+  "motion": "walk"
+}
