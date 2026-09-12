@@ -1,0 +1,30 @@
+{
+  "width": 32,
+  "height": 40,
+  "anchorX": 16,
+  "anchorY": 34,
+  "frames": 8,
+  "frameMs": 80,
+  "directions": [
+    "north",
+    "south",
+    "west",
+    "east"
+  ],
+  "atlasWidth": 256,
+  "atlasHeight": 240,
+  "rows": {
+    "north": 0,
+    "south": 1,
+    "west": 2,
+    "east": 3,
+    "idle": 4,
+    "reach": 5
+  },
+  "variants": [
+    "shopkeeper",
+    "student",
+    "neighbor",
+    "worker"
+  ]
+}
