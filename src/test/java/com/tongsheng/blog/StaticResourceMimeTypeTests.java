@@ -24,4 +24,15 @@ class StaticResourceMimeTypeTests {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", startsWith("text/javascript")));
     }
+
+    @Test
+    void servesBackgroundMusicWithAudioMimeType() throws Exception {
+        mockMvc.perform(get("/audio/mu-xin.mp3"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", startsWith("audio/")));
+
+        mockMvc.perform(get("/audio/luo-xiao-han.mp3"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", startsWith("audio/")));
+    }
 }

@@ -40,3 +40,8 @@ admin:
 submit:
   rate-limit-count: 5
   rate-limit-minutes: 5
+
+# 回执查询限流（内存方案，按 IP）
+tracking:
+  rate-limit-count: 30
+  rate-limit-minutes: 1

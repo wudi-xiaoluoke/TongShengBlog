@@ -3,53 +3,105 @@ import assert from 'node:assert/strict';
 
 import {
   CHECKOUT_COUNTER,
+  DEFAULT_SHELF_PRODUCT_IDS,
   ENTRANCE_ROUTE,
   EXIT_ROUTE,
-  FURNITURE,
+  MAX_CABINETS,
   QUEUE_POINTS,
-  SHELF_ROUTES,
-  SHELVES,
+  SLOTS_PER_ROW,
   SHOP_HUB,
   SHOPKEEPER_POINT,
+  buildWorld,
   pointInsideAnyCollision,
-  shelfAtPoint,
-  shelfByProduct,
   validateWorldLayout
 } from '../src/main/resources/static/js/game/game-world.mjs';
+import {
+  GROUPS_PER_CABINET,
+  SLOTS_PER_CABINET,
+  productCapacity,
+  planogramAssignment,
+  planogramRows,
+  unitsPerSlot
+} from '../src/main/resources/static/js/game/game-config.mjs';
 
-test('defines six interactive product shelves', () => {
-  assert.equal(SHELVES.length, 6);
-  assert.equal(new Set(SHELVES.map((shelf) => shelf.productId)).size, 6);
-  for (const shelf of SHELVES) {
-    assert.equal(shelfByProduct(shelf.productId).id, shelf.id);
-    assert.equal(shelfAtPoint(shelf.x + shelf.width / 2, shelf.y + shelf.height / 2).id, shelf.id);
+test('cabinet planogram: one row of 3 slots per product, up to 4 kinds per cabinet', () => {
+  // 不足 4 种：轮转复用空行，同种零食多占格子（容量变大）
+  const sparse = planogramRows(1, ['candy', 'chips']);
+  assert.deepEqual(sparse[0], ['candy', 'chips', 'candy', 'chips']);
+
+  // 10 种零食 10 柜：每种恰占 4 行 = 12 格，一柜最多 4 种
+  const full = planogramAssignment(10, [
+    'candy', 'chips', 'seaweed', 'soda', 'cookies',
+    'jelly', 'peanut', 'marshmallow', 'latiao', 'chocolate'
+  ]);
+  assert.equal(full.groupCounts.get('candy'), 4);
+  assert.equal(full.groupCounts.get('chocolate'), 4);
+  for (const row of full.rows) {
+    assert.equal(row.length, GROUPS_PER_CABINET);
+    assert.ok(new Set(row).size >= 1 && new Set(row).size <= 4);
   }
-  assert.equal(shelfAtPoint(760, 500), null);
+  // 每种零食都有主货柜，且该柜确实摆了它
+  for (const [productId, cabinet] of full.primaryCabinet) {
+    assert.ok(full.rows[cabinet].includes(productId));
+  }
 });
 
-test('places one shelf row on the back wall and one island row in the store center', () => {
-  const wallRow = SHELVES.slice(0, 3);
-  const islandRow = SHELVES.slice(3);
+test('product capacity derives from occupied slot rows and units per slot', () => {
+  const state = { shelves: ['candy', 'chips'], cabinetCount: 6, upgrades: { shelf: 0 } };
+  assert.equal(unitsPerSlot(state), 1);
+  // 6 柜 × 4 行 = 24 行 ÷ 2 种 = 12 行/种 → 12 × 3 = 36
+  assert.equal(productCapacity(state, 'candy'), 36);
+  assert.equal(productCapacity(state, 'chips'), 36);
+  // 扩容货架：每级每格多放 1 件
+  const upgraded = { ...state, upgrades: { shelf: 2 } };
+  assert.equal(productCapacity(upgraded, 'candy'), 108);
+  // 未上架零食没有格子
+  assert.equal(productCapacity(state, 'jelly'), 0);
+  // 全部格子数 = 柜数 × 12
+  assert.equal(6 * SLOTS_PER_CABINET, 72);
+});
 
-  assert.deepEqual(
-    SHELVES.map(({ x, y, approachPoint, waitingPoint }) => ({ x, y, approachPoint, waitingPoint })),
-    [
-      { x: 105, y: 88, approachPoint: { x: 166, y: 184 }, waitingPoint: { x: 197, y: 205 } },
-      { x: 275, y: 88, approachPoint: { x: 336, y: 184 }, waitingPoint: { x: 367, y: 205 } },
-      { x: 445, y: 88, approachPoint: { x: 506, y: 184 }, waitingPoint: { x: 537, y: 205 } },
-      { x: 105, y: 238, approachPoint: { x: 166, y: 334 }, waitingPoint: { x: 197, y: 354 } },
-      { x: 275, y: 238, approachPoint: { x: 336, y: 334 }, waitingPoint: { x: 367, y: 354 } },
-      { x: 445, y: 238, approachPoint: { x: 506, y: 334 }, waitingPoint: { x: 537, y: 354 } }
-    ]
-  );
+test('default world defines six interactive cabinets over the stocked products', () => {
+  const world = buildWorld(DEFAULT_SHELF_PRODUCT_IDS);
+  assert.equal(world.shelves.length, 6);
+  assert.equal(new Set(world.productIds).size, 6);
+  for (const productId of world.productIds) {
+    const shelf = world.shelfByProduct(productId);
+    assert.ok(shelf, `${productId} has a primary cabinet`);
+    assert.equal(world.shelfAtPoint(shelf.x + shelf.width / 2, shelf.y + shelf.height / 2).id, shelf.id);
+  }
+  assert.equal(world.shelfAtPoint(760, 500), null);
+});
 
+test('arranges cabinets as two continuous rows of five slots (zhao-yiming style)', () => {
+  const world = buildWorld([
+    'candy', 'chips', 'seaweed', 'soda', 'cookies',
+    'jelly', 'peanut', 'marshmallow', 'latiao', 'chocolate'
+  ]);
+  assert.equal(world.shelves.length, MAX_CABINETS);
+
+  const wallRow = world.shelves.filter((shelf) => shelf.y < 200);
+  const islandRow = world.shelves.filter((shelf) => shelf.y >= 200);
+  assert.equal(wallRow.length, SLOTS_PER_ROW);
+  assert.equal(islandRow.length, SLOTS_PER_ROW);
+
+  // 同排柜子紧密连续：间距恒定且很小（柜宽 106，间距 6px）
+  const rowXs = (shelves) => shelves.map((shelf) => shelf.x);
+  assert.deepEqual(rowXs(wallRow), [16, 128, 240, 352, 464]);
+  assert.deepEqual(rowXs(islandRow), [16, 128, 240, 352, 464]);
+  for (const row of [wallRow, islandRow]) {
+    for (let index = 1; index < row.length; index += 1) {
+      const gap = row[index].x - (row[index - 1].x + row[index - 1].width);
+      assert.equal(gap, 6);
+    }
+  }
+  // 靠墙排贴着后墙，中岛排不越过右通道
   for (const shelf of wallRow) assert.ok(shelf.y <= 100);
   for (const shelf of islandRow) {
     assert.ok(shelf.y >= 230);
-    assert.ok(shelf.y + shelf.height <= 330);
+    assert.ok(shelf.x + shelf.width <= 595);
   }
-  assert.ok(Math.max(...islandRow.map((shelf) => shelf.y + shelf.height)) < 350);
-  assert.ok(Math.max(...SHELVES.map((shelf) => shelf.x + shelf.width)) <= CHECKOUT_COUNTER.x - 45);
+  assert.ok(Math.max(...world.shelves.map((shelf) => shelf.x + shelf.width)) <= CHECKOUT_COUNTER.x - 45);
 });
 
 test('keeps the shopkeeper and checkout customer on opposite sides of the counter front', () => {
@@ -93,8 +145,13 @@ test('uses the exact safe routes from the entrance hub to each shelf', () => {
     { x: 760, y: 470 }
   ]);
 
-  for (const shelf of SHELVES.slice(0, 3)) {
-    assert.deepEqual(SHELF_ROUTES[shelf.id], [
+  const world = buildWorld([
+    'candy', 'chips', 'seaweed', 'soda', 'cookies',
+    'jelly', 'peanut', 'marshmallow', 'latiao', 'chocolate'
+  ]);
+  for (const productId of world.productIds.filter((id) => world.shelfByProduct(id).y < 200)) {
+    const shelf = world.shelfByProduct(productId);
+    assert.deepEqual(world.routeForProduct(productId), [
       SHOP_HUB,
       { x: 595, y: 330 },
       { x: 595, y: 205 },
@@ -102,11 +159,11 @@ test('uses the exact safe routes from the entrance hub to each shelf', () => {
       shelf.approachPoint
     ]);
   }
-  for (const shelf of SHELVES.slice(3)) {
-    assert.deepEqual(SHELF_ROUTES[shelf.id], [
+  for (const productId of world.productIds.filter((id) => world.shelfByProduct(id).y >= 200)) {
+    const shelf = world.shelfByProduct(productId);
+    assert.deepEqual(world.routeForProduct(productId), [
       SHOP_HUB,
-      { x: 595, y: 330 },
-      { x: shelf.approachPoint.x, y: 330 },
+      { x: 595, y: shelf.y + shelf.height + 6 },
       shelf.approachPoint
     ]);
   }
@@ -136,18 +193,29 @@ test('crosses the storefront boundary only through the doorway', () => {
   }
 });
 
-test('keeps every fixed route waypoint outside furniture collisions', () => {
-  const routes = [ENTRANCE_ROUTE, EXIT_ROUTE, ...Object.values(SHELF_ROUTES)];
-  for (const route of routes) {
-    for (const point of route) {
-      assert.equal(
-        pointInsideAnyCollision(point, FURNITURE),
-        false,
-        `waypoint ${point.x},${point.y} intersects furniture`
-      );
+test('keeps every fixed route waypoint outside furniture collisions for any cabinet count', () => {
+  for (const productIds of [DEFAULT_SHELF_PRODUCT_IDS, [
+    'candy', 'chips', 'seaweed', 'soda', 'cookies',
+    'jelly', 'peanut', 'marshmallow', 'latiao', 'chocolate'
+  ]]) {
+    const world = buildWorld(productIds);
+    const routes = [
+      ENTRANCE_ROUTE,
+      EXIT_ROUTE,
+      QUEUE_POINTS,
+      ...world.productIds.map((productId) => world.routeForProduct(productId))
+    ];
+    for (const route of routes) {
+      for (const point of route) {
+        assert.equal(
+          pointInsideAnyCollision(point, world.furniture),
+          false,
+          `waypoint ${point.x},${point.y} intersects furniture`
+        );
+      }
     }
+    assert.deepEqual(validateWorldLayout(world), []);
   }
-  assert.deepEqual(validateWorldLayout(), []);
 });
 
 test('defines three unique collision-free checkout queue points', () => {
@@ -156,9 +224,8 @@ test('defines three unique collision-free checkout queue points', () => {
     { x: 690, y: 304 },
     { x: 690, y: 342 }
   ]);
-  assert.equal(QUEUE_POINTS.length, 3);
-  assert.equal(new Set(QUEUE_POINTS.map((point) => `${point.x},${point.y}`)).size, 3);
+  const world = buildWorld(DEFAULT_SHELF_PRODUCT_IDS);
   for (const point of QUEUE_POINTS) {
-    assert.equal(pointInsideAnyCollision(point, FURNITURE), false);
+    assert.equal(pointInsideAnyCollision(point, world.furniture), false);
   }
 });

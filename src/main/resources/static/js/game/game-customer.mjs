@@ -1,4 +1,11 @@
-import { PRODUCTS } from './game-config.mjs';
+import {
+  PATIENCE_BASE_MS,
+  PRODUCTS,
+  TIP_PATIENCE_RATIO,
+  TIP_RATE,
+  VIP_PATIENCE_FACTOR,
+  VIP_PAY_MULTIPLIER
+} from './game-config.mjs';
 import {
   commitReservedSale,
   releaseReservedItems,
@@ -7,12 +14,12 @@ import {
 import {
   ENTRANCE_ROUTE,
   EXIT_ROUTE,
+  DEFAULT_SHELF_PRODUCT_IDS,
   QUEUE_HOLD_POINTS,
   QUEUE_POINTS,
   SHELF_HOLD_POINTS,
   SHOP_HUB,
-  routeForProduct,
-  shelfByProduct
+  buildWorld
 } from './game-world.mjs';
 
 const CUSTOMER_SPEED = 92;
@@ -49,9 +56,10 @@ function safePathToHub(customer) {
     ];
   }
   if (customer.x < 600) {
+    // 中岛柜加高后（碰撞到 y+335），过道压到 345 保证不穿柜
     return [
-      { x: customer.x, y: 330 },
-      { x: RIGHT_AISLE_X, y: 330 },
+      { x: customer.x, y: 345 },
+      { x: RIGHT_AISLE_X, y: 345 },
       HUB
     ];
   }
@@ -59,13 +67,13 @@ function safePathToHub(customer) {
 }
 
 function safePathToShelf(customer, productId) {
-  return [...safePathToHub(customer), ...routeForProduct(productId).slice(1)];
+  return [...safePathToHub(customer), ...activeWorld.routeForProduct(productId).slice(1)];
 }
 
 function safePathToWaitingPoint(customer, shelf, target) {
   const toHub = safePathToHub(customer);
   if (target.x === shelf.waitingPoint.x && target.y === shelf.waitingPoint.y) {
-    const aisleY = shelf.y < 200 ? 205 : 330;
+    const aisleY = shelf.y < 200 ? 205 : shelf.y + shelf.height + 6;
     return [...toHub, { x: RIGHT_AISLE_X, y: aisleY }, target];
   }
   return [...toHub, target];
@@ -85,7 +93,7 @@ function updateRouteDestination(customer, phase, target) {
   }
 }
 
-export function createCustomer({ id, variant = 0, request } = {}) {
+export function createCustomer({ id, variant = 0, request, vip = false } = {}) {
   const normalizedRequest = request?.length
     ? request.map((item) => ({ productId: item.productId, quantity: Math.max(1, item.quantity ?? 1) }))
     : [{ productId: 'candy', quantity: 1 }];
@@ -93,6 +101,7 @@ export function createCustomer({ id, variant = 0, request } = {}) {
   return {
     id: id ?? `customer-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     variant,
+    vip,
     productId: normalizedRequest[0].productId,
     request: normalizedRequest,
     phase: 'street',
@@ -104,6 +113,10 @@ export function createCustomer({ id, variant = 0, request } = {}) {
     frame: 0,
     animationMs: 0,
     phaseMs: 0,
+    // 耐心：只在等待（等货架/排队）时消耗；VIP 更急躁
+    patienceMs: 0,
+    maxPatienceMs: Math.round(PATIENCE_BASE_MS * (vip ? VIP_PATIENCE_FACTOR : 1)),
+    angry: false,
     shoppingIndex: 0,
     reservedItems: [],
     missingProductId: null,
@@ -134,8 +147,8 @@ function moveTowardWaypoint(customer, deltaMs) {
 }
 
 export function customerHitTest(customer, x, y) {
-  return x >= customer.x - 18 && x <= customer.x + 18
-    && y >= customer.y - 30 && y <= customer.y + 12;
+  return x >= customer.x - 20 && x <= customer.x + 20
+    && y >= customer.y - 66 && y <= customer.y + 6;
 }
 
 export function customerAtPoint(customers, x, y) {
@@ -147,7 +160,11 @@ export function customerAtPoint(customers, x, y) {
   return null;
 }
 
-export function createCustomerSimulation({ state, onCheckout = () => {}, onOutOfStock = () => {} }) {
+// 动态世界：模块级持有，加柜后通过 setWorld 热替换，所有寻路立即生效
+let activeWorld = buildWorld(DEFAULT_SHELF_PRODUCT_IDS);
+
+export function createCustomerSimulation({ state, world, onCheckout = () => {}, onOutOfStock = () => {}, onAngryLeave = () => {} }) {
+  activeWorld = world ?? buildWorld(state?.shelves ?? DEFAULT_SHELF_PRODUCT_IDS);
   const customers = [];
   const queue = [];
   const pendingQueue = [];
@@ -161,10 +178,17 @@ export function createCustomerSimulation({ state, onCheckout = () => {}, onOutOf
   }
 
   function beginShelfVisit(customer, productId) {
-    const shelf = shelfByProduct(productId);
+    const shelf = activeWorld.shelfByProduct(productId);
+    if (!shelf) {
+      // 该零食没有柜位（不应发生）：按缺货处理
+      customer.missingProductId = productId;
+      customer.phase = 'outOfStock';
+      customer.phaseMs = 0;
+      return;
+    }
     const browsingPath = safePathToShelf(customer, productId);
     customer.productId = productId;
-    customer.shelfId = shelf?.id ?? null;
+    customer.shelfId = shelf.id ?? null;
     const waiters = shelfWaiters.get(shelf.id) ?? [];
     if (shelfOccupants.has(shelf.id) || waiters.length) {
       waiters.push(customer);
@@ -180,7 +204,11 @@ export function createCustomerSimulation({ state, onCheckout = () => {}, onOutOf
   }
 
   function retargetShelfWaiters(shelfId) {
-    const shelf = shelfByProduct(customers.find((item) => item.shelfId === shelfId)?.productId);
+    const shelf = activeWorld.shelfById(shelfId);
+    if (!shelf) {
+      shelfWaiters.delete(shelfId);
+      return;
+    }
     const waiters = shelfWaiters.get(shelfId) ?? [];
     waiters.forEach((customer, index) => {
       const target = index === 0
@@ -211,6 +239,24 @@ export function createCustomerSimulation({ state, onCheckout = () => {}, onOutOf
     releaseShelf(customer.shelfId, customer.id);
     customer.shelfId = null;
     setRoute(customer, 'leaving', exitPath(customer));
+  }
+
+  /** 顾客不耐烦放弃等待：离开所有队列/货架等待位，但保留正在走的离店路线 */
+  function abandonWaiting(customer) {
+    const queueIndex = queue.indexOf(customer);
+    if (queueIndex >= 0) queue.splice(queueIndex, 1);
+    const pendingIndex = pendingQueue.indexOf(customer);
+    if (pendingIndex >= 0) pendingQueue.splice(pendingIndex, 1);
+    for (const [shelfId, waiters] of shelfWaiters) {
+      const waiterIndex = waiters.indexOf(customer);
+      if (waiterIndex >= 0) {
+        waiters.splice(waiterIndex, 1);
+        if (!waiters.length) shelfWaiters.delete(shelfId);
+        else retargetShelfWaiters(shelfId);
+      }
+    }
+    releaseShelf(customer.shelfId, customer.id);
+    customer.shelfId = null;
   }
 
   function refreshQueueTargets() {
@@ -305,7 +351,7 @@ export function createCustomerSimulation({ state, onCheckout = () => {}, onOutOf
         return;
       }
       if (customer.desiredWaitTarget) {
-        const shelf = shelfByProduct(customer.productId);
+        const shelf = activeWorld.shelfByProduct(customer.productId);
         const target = customer.desiredWaitTarget;
         customer.desiredWaitTarget = null;
         setRoute(customer, 'waitingShelf', safePathToWaitingPoint(customer, shelf, target));
@@ -323,6 +369,8 @@ export function createCustomerSimulation({ state, onCheckout = () => {}, onOutOf
     if (customer.phase === 'queueing' && queue[0] === customer) {
       customer.phase = 'checkout';
       customer.phaseMs = 0;
+      // 结账总时长（自动收银升级会缩短）：场景用它画头顶圆形进度条
+      customer.checkoutDurationMs = Math.max(700, CHECKOUT_DURATION_MS - (state.upgrades.checkout ?? 0) * 300);
       return;
     }
     if (customer.phase === 'leaving') customer.phase = 'done';
@@ -333,6 +381,24 @@ export function createCustomerSimulation({ state, onCheckout = () => {}, onOutOf
     customer.phaseMs += deltaMs;
     customer.animationMs += deltaMs;
     customer.frame = Math.floor(customer.animationMs / 180) % 2;
+
+    // === 耐心系统：等货架/排队且已站定才消耗（走路不计），耗尽则生气离店 ===
+    if (customer.phase === 'waitingShelf' || customer.phase === 'waitingQueue' || customer.phase === 'queueing') {
+      const standingStill = customer.waypointIndex >= customer.route.length;
+      if (standingStill) customer.patienceMs += deltaMs;
+      if (customer.patienceMs >= customer.maxPatienceMs) {
+        abandonWaiting(customer);
+        releaseReservedItems(state, customer.reservedItems);
+        customer.reservedItems = [];
+        customer.missingProductId = null;
+        customer.angry = true;
+        state.reputation = Math.max(0, state.reputation - 2);
+        state.stats.customersLeft += 1;
+        onAngryLeave({ customer });
+        beginLeaving(customer);
+        return;
+      }
+    }
 
     if (customer.phase === 'picking') {
       if (customer.phaseMs >= PICK_DURATION_MS) finishPicking(customer);
@@ -356,11 +422,25 @@ export function createCustomerSimulation({ state, onCheckout = () => {}, onOutOf
       return;
     }
     if (customer.phase === 'checkout') {
-      const duration = Math.max(700, CHECKOUT_DURATION_MS - (state.upgrades.checkout ?? 0) * 300);
+      const duration = customer.checkoutDurationMs
+        ?? Math.max(700, CHECKOUT_DURATION_MS - (state.upgrades.checkout ?? 0) * 300);
       if (customer.phaseMs >= duration) {
-        const result = commitReservedSale(state, customer.reservedItems, now);
+        const result = commitReservedSale(
+          state,
+          customer.reservedItems,
+          now,
+          customer.vip ? { multiplier: VIP_PAY_MULTIPLIER } : undefined
+        );
         customer.reservedItems = [];
         customer.paid = result.ok;
+        let tip = 0;
+        // 快速服务小费：等待耗时占耐心的比例足够低才给
+        if (result.ok && customer.patienceMs <= customer.maxPatienceMs * TIP_PATIENCE_RATIO) {
+          tip = Math.max(1, Math.ceil(result.revenue * TIP_RATE));
+          state.coins += tip;
+          state.stats.totalRevenue += tip;
+          if (state.day) state.day.revenue += tip;
+        }
         if (queue[0] === customer) queue.shift();
         else {
           const index = queue.indexOf(customer);
@@ -368,7 +448,7 @@ export function createCustomerSimulation({ state, onCheckout = () => {}, onOutOf
         }
         refreshQueueTargets();
         promotePendingQueue();
-        onCheckout({ customer, ...result });
+        onCheckout({ customer, ...result, tip });
         beginLeaving(customer);
       }
       return;
@@ -407,7 +487,19 @@ export function createCustomerSimulation({ state, onCheckout = () => {}, onOutOf
     return true;
   }
 
-  return { customers, queue, pendingQueue, shelfOccupants, shelfWaiters, spawn, update, releaseCustomer };
+  return {
+    customers,
+    queue,
+    pendingQueue,
+    shelfOccupants,
+    shelfWaiters,
+    spawn,
+    update,
+    releaseCustomer,
+    setWorld(nextWorld) {
+      activeWorld = nextWorld;
+    }
+  };
 }
 
 export function requestLabel(request = []) {

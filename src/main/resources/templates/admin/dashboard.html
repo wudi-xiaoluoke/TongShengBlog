@@ -53,7 +53,7 @@
           <td>
             <div class="title" th:text="${a.title}">标题</div>
             <span class="content" th:text="${a.content}"></span>
-            <div class="reason" th:if="${a.rejectReason}" th:text="'驳回原因：' + ${a.rejectReason}"></div>
+            <div class="reason" th:if="${a.feedback}" th:text="'博主的话：' + ${a.feedback}"></div>
           </td>
           <td th:text="${a.nickname}">同生</td>
           <td th:text="${a.categoryName ?: '—'}">随笔</td>
@@ -67,15 +67,11 @@
           </td>
           <td>
             <div class="actions">
-              <!-- 待审核：通过 + 驳回 -->
-              <form class="inline" method="post" th:if="${a.status == 0}"
-                    th:action="@{/admin/article/{id}/approve(id=${a.id})}">
-                <button class="btn ok" type="submit">通过</button>
-              </form>
-              <form class="inline" method="post" th:if="${a.status == 0}"
-                    th:action="@{/admin/article/{id}/reject(id=${a.id})}">
-                <input class="reason" type="text" name="reason" placeholder="原因(可选)">
-                <button class="btn bad" type="submit">驳回</button>
+              <!-- 待审核：附言 + 通过/驳回 共用一个输入框（按钮 formaction 决定去向） -->
+              <form class="inline" method="post" th:if="${a.status == 0}">
+                <input class="feedback" type="text" name="feedback" maxlength="500" placeholder="给投稿人的话(选填)">
+                <button class="btn ok" type="submit" th:attr="formaction=@{/admin/article/{id}/approve(id=${a.id})}">通过</button>
+                <button class="btn bad" type="submit" th:attr="formaction=@{/admin/article/{id}/reject(id=${a.id})}">驳回</button>
               </form>
 
               <!-- 编辑 -->

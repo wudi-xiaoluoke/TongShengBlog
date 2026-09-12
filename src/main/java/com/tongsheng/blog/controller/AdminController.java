@@ -120,8 +120,10 @@ public class AdminController {
     // ---------------- 审核操作 ----------------
 
     @PostMapping("/admin/article/{id}/approve")
-    public String approve(@PathVariable Long id, RedirectAttributes redirect) {
-        if (articleService.approve(id)) {
+    public String approve(@PathVariable Long id,
+                          @RequestParam(required = false) String feedback,
+                          RedirectAttributes redirect) {
+        if (articleService.approve(id, feedback)) {
             redirect.addFlashAttribute("flash", "已审核通过");
         } else {
             redirect.addFlashAttribute("flash", "操作失败：文章不存在或状态不符");
@@ -131,10 +133,11 @@ public class AdminController {
 
     @PostMapping("/admin/article/{id}/reject")
     public String reject(@PathVariable Long id,
-                         @RequestParam(required = false) String reason,
+                         @RequestParam(required = false) String feedback,
                          RedirectAttributes redirect) {
-        if (articleService.reject(id, reason)) {
-            redirect.addFlashAttribute("flash", "已驳回" + (reason != null && !reason.isBlank() ? "：" + reason.trim() : ""));
+        if (articleService.reject(id, feedback)) {
+            String note = (feedback == null || feedback.isBlank()) ? "" : "：「" + feedback.trim() + "」";
+            redirect.addFlashAttribute("flash", "已驳回" + note);
         } else {
             redirect.addFlashAttribute("flash", "操作失败：文章不存在或状态不符");
         }

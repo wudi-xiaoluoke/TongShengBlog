@@ -1,0 +1,15 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>同生零食铺 · 美术验收</title>
+<style>body{margin:0;background:#e9ece3;color:#35464c;font:14px 'Microsoft YaHei',sans-serif}main{max-width:1152px;margin:24px auto;padding:0 16px}h1{font-size:24px;color:#a52f39}p{font-size:12px;color:#69796e;line-height:1.8}nav{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}button,select,input{padding:8px;border:1px solid #abb8a7;background:#fffbee;color:#80323c}canvas{width:100%;image-rendering:pixelated;border:3px solid #62716d;box-sizing:border-box}a{color:#a32d38}output{min-width:60px;align-self:center}</style>
+<main><h1>同生零食铺 · 四季与日夜</h1><p>同一店铺、同一镜头、同一货柜坐标。这里是独立美术验收场景，展示满库存与人物；不会读取或修改游戏存档。</p>
+<nav><select id="season" aria-label="季节"><option value="spring">春 · 花瓣</option><option value="summer">夏 · 绿荫</option><option value="autumn" selected>秋 · 落叶</option><option value="winter">冬 · 积雪</option></select><input id="hour" aria-label="游戏时间" type="range" min="9" max="21" step="0.25" value="12"><output id="clock">12:00</output><select id="cabinets" aria-label="柜数"><option value="6">6 柜</option><option value="10">10 柜</option></select><button id="animate">暂停天气</button><a href="/game">进入游戏 →</a></nav><canvas id="scene" width="768" height="512"></canvas></main>
+<script type="module">
+import {createSceneRenderer,loadGameAssets} from '/js/game/game-scene.mjs?v=20260909-live';
+import {createInitialState} from '/js/game/game-state.mjs';
+import {PRODUCTS,productCapacity,gameClock} from '/js/game/game-config.mjs';
+const state=createInitialState();state.level=5;state.shelves=Object.keys(PRODUCTS);
+const canvas=document.querySelector('canvas'),render=createSceneRenderer(canvas,await loadGameAssets());
+const customers=[{id:'a',x:212,y:209,direction:'east',phase:'street',variant:0,frame:0,request:[]},{id:'b',x:433,y:360,direction:'west',phase:'street',variant:1,frame:1,request:[]},{id:'c',x:690,y:264,direction:'north',phase:'checkout',variant:2,request:[],phaseMs:1200,checkoutDurationMs:2200,vip:true}];
+let animate=true,time=0,last=0;
+document.querySelector('#animate').onclick=e=>{animate=!animate;e.target.textContent=animate?'暂停天气':'播放天气'};
+function draw(t){if(animate)time+=Math.min(50,t-last);last=t;state.season={id:document.querySelector('#season').value};state.day.elapsedMs=(Number(document.querySelector('#hour').value)-9)/12*180000;state.cabinetCount=Number(document.querySelector('#cabinets').value);for(const id of state.shelves)state.shelfInventory[id]=productCapacity(state,id);document.querySelector('#clock').textContent=gameClock(state).clock;render({state,customers,elapsedMs:time});requestAnimationFrame(draw)}requestAnimationFrame(draw);
+</script></html>

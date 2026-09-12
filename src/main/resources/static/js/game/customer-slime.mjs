@@ -1,0 +1,2 @@
+export function slimePose(phase){const t=((phase%1)+1)%1,wave=Math.sin(Math.PI*t)**2,scaleY=.86+.28*wave;return {lift:8*wave,scaleY,scaleX:1/scaleY};}
+export function createSlimeRig(cells){return (ctx,direction,phase,action='walk')=>{const pose=action==='walk'?slimePose(phase):{lift:0,scaleX:1,scaleY:1},index=['north','south','west','east'].indexOf(direction);ctx.save();ctx.imageSmoothingEnabled=false;ctx.translate(48,91-pose.lift);ctx.scale(.375*pose.scaleX,.375*pose.scaleY);ctx.drawImage(cells[index],-125,-211);ctx.restore();};}

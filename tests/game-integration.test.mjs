@@ -6,9 +6,11 @@ const template = readFileSync('src/main/resources/templates/game/index.html', 'u
 const main = readFileSync('src/main/resources/static/js/game/main.mjs', 'utf8');
 
 test('game template exposes contextual shelf restocking controls', () => {
-  for (const id of ['shelf-panel', 'shelf-product', 'shelf-stock', 'warehouse-stock', 'restock-one', 'restock-five', 'restock-full']) {
+  // 补货气泡：每行一张卡（下拉换种类 + data-restock-product 补货按钮），不再有主商品固定补货区
+  for (const id of ['shelf-panel', 'shelf-product', 'shelf-extra-products']) {
     assert.match(template, new RegExp(`id="${id}"`));
   }
+  assert.doesNotMatch(template, /id="restock-one"/);
   assert.doesNotMatch(template, /id="serve-customer"/);
 });
 

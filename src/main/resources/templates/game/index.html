@@ -5,12 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>同生零食铺 — 像素经营小游戏</title>
   <link rel="stylesheet" th:href="@{/css/home.css}">
-  <link rel="stylesheet" th:href="@{/css/game.css}">
-  <link rel="preload" as="image" th:href="@{/images/game/snack-shop-empty-scene.png}">
-  <link rel="preload" as="image" th:href="@{/images/game/shelf-empty.png}">
-  <link rel="preload" as="image" th:href="@{/images/game/checkout-counter.png}">
-  <link rel="preload" as="image" th:href="@{/images/game/characters.png}">
-  <link rel="preload" as="image" th:href="@{/images/game/fixtures-and-products.png}">
+  <link rel="stylesheet" th:href="@{/css/game.css(v=20260909-live)}">
 </head>
 <body>
 <div class="wrap game-wrap">
@@ -21,99 +16,214 @@
       <div>
         <p class="pixel-kicker">NEIGHBORHOOD SNACK SHOP</p>
         <h1 id="game-title">同生零食铺</h1>
-        <p>进货、接待顾客、升级小店，慢慢经营自己的街角零食铺。</p>
+        <p>街角好食，四季常新。经营一家属于你的零食店。</p>
       </div>
       <div class="heading-actions">
+        <span id="player-chip" class="save-status" hidden aria-live="polite"></span>
         <span id="save-status" class="save-status" aria-live="polite">正在读取存档</span>
         <button id="help-button" class="pixel-button pixel-button-light" type="button">玩法说明</button>
       </div>
     </div>
 
-    <section class="game-stats" aria-label="店铺状态">
-      <div><span>金币</span><strong id="coins-value">200</strong></div>
-      <div><span>口碑</span><strong id="reputation-value">0</strong></div>
-      <div><span>店铺等级</span><strong id="level-value">1</strong></div>
-      <div><span>累计营业额</span><strong id="revenue-value">0</strong></div>
-    </section>
+    <section class="game-stage" id="game-stage" aria-label="俯视零食店场景">
+      <canvas id="snack-shop-canvas" width="768" height="512">
+        你的浏览器需要支持 Canvas 才能运行零食店游戏。
+      </canvas>
 
-    <div class="game-layout">
-      <section class="scene-card" aria-label="俯视零食店场景">
-        <div class="scene-toolbar">
-          <span id="scene-message">顾客会从街道走进店里</span>
-          <span id="customer-count">店内顾客 0 / 2</span>
-        </div>
-        <div class="canvas-shell">
-          <canvas id="snack-shop-canvas" width="768" height="512">
-            你的浏览器需要支持 Canvas 才能运行零食店游戏。
-          </canvas>
-          <div id="loading-overlay" class="scene-overlay">
-            <div class="pixel-loader" aria-hidden="true"></div>
-            <strong id="loading-text">正在整理货架…</strong>
-          </div>
-          <div id="asset-error" class="scene-overlay is-hidden" role="alert">
-            <strong>店铺素材没有加载成功</strong>
-            <button id="retry-assets" class="pixel-button" type="button">重新加载</button>
-          </div>
-        </div>
-        <p class="scene-tip">点击货架查看库存并补货。顾客会自己选购、排队、结账，再从街道离开。</p>
-      </section>
-
-      <aside class="game-sidebar" aria-label="经营操作">
-        <section id="customer-order" class="pixel-panel customer-order">
-          <div class="panel-title"><span>当前顾客</span><span id="customer-state">等待进店</span></div>
-          <div id="customer-request" class="customer-request">
-            <p>点击场景中的顾客查看想买什么。</p>
-          </div>
+      <div class="stage-hud" aria-label="店铺状态">
+        <section class="game-stats">
+          <div><span>金币</span><strong id="coins-value">200</strong></div>
+          <div><span>口碑</span><strong id="reputation-value">0</strong></div>
+          <div><span>等级</span><strong id="level-value">1</strong></div>
+          <div><span>营业额</span><strong id="revenue-value">0</strong></div>
         </section>
+        <span id="day-timer" class="hud-day">第 1 天</span>
+      </div>
 
-        <section id="shelf-panel" class="pixel-panel shelf-panel is-dormant">
+      <span id="scene-message" class="stage-message">顾客会从街道走进店里</span>
+
+      <!-- 场景内上下文气泡：点货架时贴着对象浮现，平时完全不占画面 -->
+      <div class="stage-popovers" id="stage-popovers" aria-label="经营操作">
+        <section id="shelf-panel" class="pixel-panel popover popover-shelf is-hidden">
           <div class="panel-title"><span id="shelf-product">选择货架</span><span id="shelf-state">等待选择</span></div>
-          <div class="shelf-stock-grid">
-            <div><span>货架存量</span><strong id="shelf-stock">--</strong></div>
-            <div><span>仓库存量</span><strong id="warehouse-stock">--</strong></div>
+          <div id="shelf-extra-products" class="product-list"></div>
+        </section>
+
+      </div>
+
+      <!-- 店长手机：右下角小手机，点开用 App 管理库存/进货/升级/账本/总部 -->
+      <button id="phone-button" class="phone-button" type="button" aria-label="店长手机" aria-expanded="false">
+        <i aria-hidden="true"></i>
+      </button>
+
+      <div id="phone-shell" class="phone-shell is-hidden" role="dialog" aria-label="店长手机">
+        <button id="phone-close" class="phone-close" type="button" aria-label="关闭店长手机">×</button>
+        <div id="phone-statusbar" class="phone-statusbar" aria-hidden="true">
+          <span id="phone-clock">--:--</span>
+          <span class="phone-status-icons">
+            <svg width="15" height="11" viewBox="0 0 15 11"><rect x="0" y="7" width="2.6" height="4" rx="0.8" fill="currentColor"/><rect x="4" y="5" width="2.6" height="6" rx="0.8" fill="currentColor"/><rect x="8" y="2.6" width="2.6" height="8.4" rx="0.8" fill="currentColor" opacity="0.45"/><rect x="12" y="0" width="2.6" height="11" rx="0.8" fill="currentColor" opacity="0.45"/></svg>
+            <svg width="15" height="11" viewBox="0 0 15 11"><path d="M7.5 10.6 5.3 8.4a3.2 3.2 0 0 1 4.4 0Zm3.4-3.4a5.8 5.8 0 0 0-6.8 0L2.4 5.5a8.4 8.4 0 0 1 10.2 0Z" fill="currentColor"/></svg>
+            <svg width="23" height="11" viewBox="0 0 23 11"><rect x="0.5" y="0.5" width="19" height="10" rx="2.8" fill="none" stroke="currentColor" opacity="0.4"/><rect x="2" y="2" width="13" height="7" rx="1.4" fill="currentColor"/><path d="M21.2 3.8v3.4a1.9 1.9 0 0 0 0-3.4Z" fill="currentColor" opacity="0.4"/></svg>
+          </span>
+        </div>
+        <div class="phone-island" aria-hidden="true"></div>
+        <div class="phone-screen">
+          <div id="phone-home" class="phone-home">
+            <p class="phone-greeting">店长手机<br><small>库存 · 进货 · 任务，一部手机搞定</small></p>
+            <div class="phone-apps">
+              <button class="phone-app app-inventory" type="button" data-panel="inventory-panel"><i aria-hidden="true">仓</i>库存</button>
+              <button class="phone-app app-supply" type="button" data-panel="supply-panel"><i aria-hidden="true">运</i>进货</button>
+              <button class="phone-app app-upgrades" type="button" data-panel="upgrades-panel"><i aria-hidden="true">↑</i>升级</button>
+              <button class="phone-app app-ledger" type="button" data-panel="ledger-panel"><i aria-hidden="true">账</i>账本</button>
+              <button class="phone-app app-hq" type="button" data-panel="hq-panel"><i aria-hidden="true">总</i>总部</button>
+            </div>
+            <div class="phone-widget" aria-label="今日经营概览">
+              <div class="widget-main">
+                <span>今日营业额</span>
+                <strong><em id="widget-revenue">0</em><small id="widget-goal"> / 0</small></strong>
+                <div class="widget-bar"><i id="widget-bar-fill" style="width:0%"></i></div>
+              </div>
+              <div class="widget-side">
+                <div><span>季节</span><strong id="widget-season">春</strong></div>
+                <div><span>金币</span><strong id="widget-coins">0</strong></div>
+                <div><span>口碑</span><strong id="widget-reputation">0</strong></div>
+              </div>
+            </div>
           </div>
-          <div class="restock-actions">
-            <button id="restock-one" class="mini-button" type="button" disabled>补 1 件</button>
-            <button id="restock-five" class="mini-button" type="button" disabled>补 5 件</button>
-            <button id="restock-full" class="mini-button" type="button" disabled>补满</button>
-          </div>
-        </section>
 
-        <nav class="game-tabs" aria-label="经营面板">
-          <button class="game-tab is-active" type="button" data-panel="inventory-panel">库存</button>
-          <button class="game-tab" type="button" data-panel="supply-panel">进货</button>
-          <button class="game-tab" type="button" data-panel="upgrades-panel">升级</button>
-          <button class="game-tab" type="button" data-panel="ledger-panel">账本</button>
-        </nav>
+          <section id="inventory-panel" class="phone-page is-hidden" data-phone-page>
+            <div class="phone-page-head">
+              <button class="phone-back" type="button" data-back>返回</button>
+              <strong>仓库 / 货架</strong>
+              <span id="capacity-label">每柜 12 格</span>
+            </div>
+            <nav class="phone-cats" data-phone-cats aria-label="库存分类"></nav>
+            <div id="inventory-list" class="product-list"></div>
+          </section>
 
-        <section id="inventory-panel" class="pixel-panel game-panel" data-game-panel>
-          <div class="panel-title"><span>仓库 / 货架</span><span id="capacity-label">单架容量 20</span></div>
-          <div id="inventory-list" class="product-list"></div>
-        </section>
+          <section id="supply-panel" class="phone-page is-hidden" data-phone-page>
+            <div class="phone-page-head">
+              <button class="phone-back" type="button" data-back>返回</button>
+              <strong>配送中心</strong>
+              <span id="delivery-label">普通配送</span>
+            </div>
+            <nav class="phone-cats" data-phone-cats aria-label="订货分类"></nav>
+            <div id="supply-list" class="product-list"></div>
+            <div class="subsection-title">运输中的订单</div>
+            <div id="active-orders" class="active-orders"></div>
+          </section>
 
-        <section id="supply-panel" class="pixel-panel game-panel is-hidden" data-game-panel>
-          <div class="panel-title"><span>配送中心</span><span id="delivery-label">普通配送</span></div>
-          <div id="supply-list" class="product-list"></div>
-          <div class="subsection-title">运输中的订单</div>
-          <div id="active-orders" class="active-orders"></div>
-        </section>
+          <section id="upgrades-panel" class="phone-page is-hidden" data-phone-page>
+            <div class="phone-page-head">
+              <button class="phone-back" type="button" data-back>返回</button>
+              <strong>店铺升级</strong>
+              <span>永久生效</span>
+            </div>
+            <div class="subsection-title">新增零食柜</div>
+            <div id="cabinet-list" class="product-list"></div>
+            <div class="subsection-title">店铺升级</div>
+            <div id="upgrade-list" class="upgrade-list"></div>
+          </section>
 
-        <section id="upgrades-panel" class="pixel-panel game-panel is-hidden" data-game-panel>
-          <div class="panel-title"><span>店铺升级</span><span>永久生效</span></div>
-          <div id="upgrade-list" class="upgrade-list"></div>
-        </section>
+          <section id="ledger-panel" class="phone-page is-hidden" data-phone-page>
+            <div class="phone-page-head">
+              <button class="phone-back" type="button" data-back>返回</button>
+              <strong>经营账本</strong>
+              <span>最近 30 条</span>
+            </div>
+            <div class="ledger-summary">
+              <div><span>服务顾客</span><strong id="served-value">0</strong></div>
+              <div><span>离店顾客</span><strong id="left-value">0</strong></div>
+            </div>
+            <div id="ledger-list" class="ledger-list"></div>
+            <button id="open-reset" class="text-button" type="button">重新开店</button>
+          </section>
 
-        <section id="ledger-panel" class="pixel-panel game-panel is-hidden" data-game-panel>
-          <div class="panel-title"><span>经营账本</span><span>最近 30 条</span></div>
-          <div class="ledger-summary">
-            <div><span>服务顾客</span><strong id="served-value">0</strong></div>
-            <div><span>离店顾客</span><strong id="left-value">0</strong></div>
-          </div>
-          <div id="ledger-list" class="ledger-list"></div>
-          <button id="open-reset" class="text-button" type="button">重新开店</button>
-        </section>
-      </aside>
-    </div>
+          <section id="hq-panel" class="phone-page is-hidden" data-phone-page>
+            <div class="phone-page-head">
+              <button class="phone-back" type="button" data-back>返回</button>
+              <strong>总部任务</strong>
+              <span>加盟通道</span>
+            </div>
+            <p class="empty-panel">总部暂无新任务。之后会在这里下发新品上架、店铺装饰等任务，记得常看手机。</p>
+          </section>
+        </div>
+        <div class="phone-homebar" aria-hidden="true"></div>
+      </div>
+
+      <!-- 凌晨订货过场：打烊后夜幕画面，下完进货单再开启新的一天 -->
+      <div id="night-overlay" class="night-overlay is-hidden" role="dialog" aria-label="凌晨订货时间">
+        <div class="night-sky" aria-hidden="true">
+          <i class="night-moon"></i>
+          <i class="night-star star-1"></i>
+          <i class="night-star star-2"></i>
+          <i class="night-star star-3"></i>
+          <i class="night-star star-4"></i>
+          <i class="night-star star-5"></i>
+          <i class="night-star star-6"></i>
+          <i class="night-star star-7"></i>
+          <i class="night-star star-8"></i>
+          <i class="night-cloud cloud-1"></i>
+          <i class="night-cloud cloud-2"></i>
+          <div class="night-skyline"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="night-book">
+          <div class="nb-cover left" aria-hidden="true"></div>
+          <div class="nb-cover right" aria-hidden="true"></div>
+          <div class="nb-spine" aria-hidden="true"></div>
+          <section class="nb-page left">
+            <div class="nb-paper">
+              <div class="nb-page-head">
+                <div class="nb-page-head-text">
+                  <h3>打烊小结</h3>
+                  <span>CLOSED · 第 <b id="night-day">1</b> 天 · 21:00</span>
+                </div>
+                <span class="night-stamp" aria-hidden="true">已打烊</span>
+              </div>
+              <ul class="nb-ledger">
+                <li><span>今日营业额</span><i></i><strong id="night-revenue">0</strong></li>
+                <li><span>今日目标</span><i></i><strong id="night-goal">0</strong></li>
+                <li><span>今晚房租</span><i></i><strong id="night-rent">0</strong></li>
+                <li><span>现有金币</span><i></i><strong id="night-coins">0</strong></li>
+              </ul>
+              <div class="night-goal-bar"><i id="night-goal-fill"></i><b id="night-goal-text">0%</b></div>
+              <p id="night-summary" class="night-note">今天的营业结束了。</p>
+              <div class="night-divider subtle"><span>运输中的订单</span></div>
+              <div id="night-orders" class="active-orders"></div>
+              <div class="nb-foot">— 今天也辛苦了 —</div>
+            </div>
+          </section>
+          <section class="nb-page right">
+            <div class="nb-paper">
+              <div class="nb-page-head">
+                <div class="nb-page-head-text">
+                  <h3>深夜订货</h3>
+                  <span>RESTOCK · 开门后陆续到货</span>
+                </div>
+              </div>
+              <nav id="night-bookmarks" class="nr-bookmarks" aria-label="零食分类"></nav>
+              <div class="nb-scroll">
+                <div id="night-supply-list" class="nr-table"></div>
+              </div>
+              <div class="nr-foot">
+                <span class="nr-total">已选 <b id="night-total-qty">0</b> 份 · 合计 <b id="night-total-cost">0</b> 金币</span>
+                <button id="night-clear" class="nr-clear" type="button">清空</button>
+                <button id="open-new-day" class="night-open" type="button">开门营业 · 09:00</button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div id="loading-overlay" class="scene-overlay">
+        <div class="pixel-loader" aria-hidden="true"></div>
+        <strong id="loading-text">正在整理货架…</strong>
+      </div>
+      <div id="asset-error" class="scene-overlay is-hidden" role="alert">
+        <strong>店铺素材没有加载成功</strong>
+        <button id="retry-assets" class="pixel-button" type="button">重新加载</button>
+      </div>
+    </section>
   </main>
 
   <div id="game-toast" class="game-toast" role="status" aria-live="polite"></div>
@@ -123,10 +233,16 @@
       <div class="dialog-title"><strong>店长手册</strong><button value="close" aria-label="关闭">关闭</button></div>
       <ol>
         <li>在“进货”里下单，倒计时结束后商品进入仓库。</li>
-        <li>点击场景中的货架，可从仓库补 1 件、5 件或直接补满。</li>
+        <li>点击场景中的零食柜（每柜 12 格，一行 3 格放一种、最多 4 种），可从仓库补 1 件、5 件或直接补满。</li>
+        <li>在“升级”里花金币新增零食柜：柜子越多全店格子越多；零食种类不够时，同种零食会自动多占几行格子，容量更大。</li>
         <li>顾客会沿固定路线进店，自己取货、排队结账并离开。</li>
-        <li>整张订单会在顾客进店时预留，缺货时不会扣掉半张订单。</li>
+        <li>等待会消耗顾客的耐心（头顶黄条）：耗尽就生气离店，口碑 -2；快速服务则有 12% 小费。</li>
+        <li>每个营业日 3 分钟，打烊要交房租（随等级上涨）；当日营业额达到房租两倍，口碑 +5。</li>
+        <li>口碑够高会吸引金冠贵客：一次买多样、付款 1.5 倍，但耐心更短。</li>
         <li>升级自动收银可以缩短每位顾客的结账时间。</li>
+        <li>一天分早晨、中午、下午、傍晚、晚上：中午和下午是客流高峰，傍晚最少；不同时段来的客人也不一样。</li>
+        <li>季节跟着现实月份走（3-5 月春、6-8 月夏、9-11 月秋、12-2 月冬）：夏天客人最多，冬天最少，窗外的景色、飘落的花瓣和积雪都会跟着变。</li>
+        <li>打烊后进入凌晨订货时间：夜幕下慢慢下进货单，点"开门营业"才开始新的一天。</li>
         <li>进货计时和经营进度会自动保存在当前浏览器。</li>
       </ol>
     </form>
@@ -146,6 +262,6 @@
   <footer th:replace="~{fragments/layout :: footer}"></footer>
 </div>
 
-<script type="module" th:src="@{/js/game/main.mjs(v=20260810-layered)}"></script>
+<script type="module" th:src="@{/js/game/main.mjs(v=20260909-live)}"></script>
 </body>
 </html>

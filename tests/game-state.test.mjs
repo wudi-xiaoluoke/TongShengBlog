@@ -96,8 +96,9 @@ test('migrates legacy inventory into shelves then warehouse', () => {
   const state = restoreState(legacy, 2_000);
 
   assert.equal(state.saveVersion, 2);
-  assert.equal(state.shelfInventory.candy, 20);
-  assert.equal(state.warehouseInventory.candy, 5);
+  // 默认 6 柜 6 种：每种 4 行 × 3 格 × 每格 1 件 = 12
+  assert.equal(state.shelfInventory.candy, 12);
+  assert.equal(state.warehouseInventory.candy, 13);
   assert.equal(state.shelfInventory.chips, 3);
 });
 

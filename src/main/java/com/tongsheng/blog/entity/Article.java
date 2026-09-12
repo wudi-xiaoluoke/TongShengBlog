@@ -1,5 +1,6 @@
 package com.tongsheng.blog.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -48,6 +49,17 @@ public class Article {
     private Integer status;
 
     private String rejectReason;
+
+    /** 投稿回执号（唯一；旧数据为 null） */
+    private String trackingCode;
+
+    /** 站长给投稿人的话（通过/驳回都写入，投稿人可见） */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String feedback;
+
+    /** 审核时间 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private LocalDateTime reviewedAt;
 
     /** 审核通过发布时间 */
     private LocalDateTime publishTime;

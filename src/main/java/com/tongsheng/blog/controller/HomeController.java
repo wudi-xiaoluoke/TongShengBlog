@@ -51,17 +51,31 @@ public class HomeController {
     }
 
     /** 主页：随机展示一批已发布文章（默认 10 篇，可切 5/10/20）+ 投稿表单。
-     *  随机种子固定在会话内：点进文章再「回到小本本」时，文章集与顺序保持不变。 */
+     *  随机种子固定在会话内：点进文章再「回到小本本」时，文章集与顺序保持不变。
+     *  带 t 参数（「换一批」按钮）时重新生成种子，换出新的随机文章集。 */
     @GetMapping("/")
-    public String index(@RequestParam(defaultValue = "10") int size, HttpSession session, Model model) {
+    public String index(@RequestParam(defaultValue = "10") int size,
+                        @RequestParam(required = false) String t,
+                        HttpSession session, Model model) {
         int pageSize = normalizeSize(size);
-        List<Article> articles = articleService.listRandomPublished(pageSize, homeSeed(session));
+        List<Article> articles = articleService.listRandomPublished(pageSize, homeSeed(session, t));
         model.addAttribute("articles", articles);
         model.addAttribute("pageSize", pageSize);
         model.addAttribute("total", articleService.countPublished());
         model.addAttribute("submit", new SubmitDTO());
         model.addAttribute("categories", categoryService.listSorted());
         return "home/index";
+    }
+
+    /** 首页文章卡片片段（「换一批」AJAX 局部刷新用）：只渲染卡片，不整页跳转。
+     *  带 t 参数即重新随机（与整页 / 路由同一套会话种子逻辑）。 */
+    @GetMapping("/home/posts")
+    public String postsFragment(@RequestParam(defaultValue = "10") int size,
+                                @RequestParam(required = false) String t,
+                                HttpSession session, Model model) {
+        int pageSize = normalizeSize(size);
+        model.addAttribute("articles", articleService.listRandomPublished(pageSize, homeSeed(session, t)));
+        return "home/index :: posts";
     }
 
     /** 手账档案馆：全部已发布文章按月分组，以翻书页形式展示 */
@@ -71,8 +85,12 @@ public class HomeController {
         return "notes/index";
     }
 
-    /** 会话内首页随机种子：首次访问生成并存入 session，之后复用（返回首页不再打乱） */
-    private long homeSeed(HttpSession session) {
+    /** 会话内首页随机种子：首次访问生成并存入 session，之后复用（返回首页不再打乱）。
+     *  reshuffle（t 参数非空）时丢弃旧种子，下次生成时得到新的随机批次。 */
+    private long homeSeed(HttpSession session, String reshuffle) {
+        if (reshuffle != null && !reshuffle.isBlank()) {
+            session.removeAttribute(SESSION_HOME_SEED);
+        }
         Object seed = session.getAttribute(SESSION_HOME_SEED);
         if (seed instanceof Number n) {
             return n.longValue();
@@ -144,8 +162,9 @@ public class HomeController {
                 ? dto.getCategoryId() : null;
         article.setCategoryId(categoryId);
         articleService.submit(article);
-        redirect.addFlashAttribute("ok", "已收到，等审核通过就会出现在小本本上～");
-        return "redirect:/#guest";
+        redirect.addFlashAttribute("ok", "已收到！回执号 " + article.getTrackingCode()
+                + "，收藏本页，审核结果出来就能看");
+        return "redirect:/track?code=" + article.getTrackingCode();
     }
 
     private String clientIp(HttpServletRequest request) {

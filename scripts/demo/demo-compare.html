@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Q 版零食店 — 新旧对比</title>
+  <link rel="stylesheet" href="/css/game.css">
+  <style>
+    body { background: #fdf3da; padding: 20px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+    .wrap { max-width: 1500px; margin: 0 auto; background: var(--paper); border-radius: 16px; padding: 18px; box-shadow: 0 6px 0 var(--wood-mid); }
+    h2 { font-family: "Consolas", monospace; color: var(--wood-ink); margin: 0 0 4px; }
+    .sub { color: #8a6f52; margin: 0 0 18px; font-size: 13px; }
+    .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
+    .cell { background: #1e1712; border-radius: 10px; overflow: hidden; position: relative; }
+    .cell canvas, .cell img { display: block; width: 100%; height: auto; }
+    .tag { position: absolute; top: 8px; left: 8px; font: 600 12px/1 "Consolas", monospace;
+           padding: 5px 9px; border-radius: 999px; color: #fff; }
+    .tag.old { background: rgba(120,90,70,.85); }
+    .tag.new { background: rgba(200,110,60,.9); }
+    h3 { font-family: "Consolas", monospace; color: var(--wood-ink); font-size: 15px;
+         margin: 0 0 8px; padding-left: 8px; border-left: 4px solid var(--wood-mid); }
+    .note { color: #8a6f52; font-size: 12px; margin: 6px 0 0; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h2>🛍️ 零食店小游戏 — 新旧对比</h2>
+  <p class="sub">左＝重构前（写实像素风，原仓库资源）　右＝重构后（像素 Q 版 + 温馨木色）</p>
+
+  <h3>整体场景</h3>
+  <div class="cmp">
+    <div class="cell"><span class="tag old">BEFORE</span><img src="/old/images/game/snack-shop-empty-scene.png" alt="旧场景"></div>
+    <div class="cell"><span class="tag new">AFTER</span><img src="/images/game/snack-shop-empty-scene.png" alt="新场景"></div>
+  </div>
+
+  <h3>货架</h3>
+  <div class="cmp">
+    <div class="cell"><span class="tag old">BEFORE</span><img src="/old/images/game/shelf-empty.png" alt="旧货架"></div>
+    <div class="cell"><span class="tag new">AFTER</span><img src="/images/game/shelf-empty.png" alt="新货架"></div>
+  </div>
+
+  <h3>收银台</h3>
+  <div class="cmp">
+    <div class="cell"><span class="tag old">BEFORE</span><img src="/old/images/game/checkout-counter.png" alt="旧收银台"></div>
+    <div class="cell"><span class="tag new">AFTER</span><img src="/images/game/checkout-counter.png" alt="新收银台"></div>
+  </div>
+
+  <h3>顾客角色（正面，等比例放大）</h3>
+  <div class="cmp">
+    <div class="cell"><span class="tag old">BEFORE · sprite sheet</span><canvas id="oldChar" width="384" height="332"></canvas></div>
+    <div class="cell"><span class="tag new">AFTER · 程序化绘制</span><canvas id="newChar" width="384" height="332"></canvas></div>
+  </div>
+  <p class="note">旧版是从 1774×887 图集里裁出的 128×222 帧；新版是 canvas 实时绘制，头身比 1.5:1、大圆眼，可无损缩放。</p>
+
+  <h3>商品图标（糖 / 薯片 / 海苔 / 汽水 / 饼干 / 果冻）</h3>
+  <div class="cmp">
+    <div class="cell"><span class="tag old">BEFORE · 图集格</span><canvas id="oldProd" width="384" height="256"></canvas></div>
+    <div class="cell"><span class="tag new">AFTER · 程序化绘制</span><canvas id="newProd" width="384" height="256"></canvas></div>
+  </div>
+
+  <h3>完整游戏画面（新风格实机渲染）</h3>
+  <div class="cell" style="margin-bottom:8px"><span class="tag new">AFTER</span><canvas id="scene" width="768" height="512"></canvas></div>
+  <p class="note">顾客在货架前挑选、店主在收银台后待命，右侧是排队区——完整跑通渲染管线。</p>
+</div>
+
+<script type="module">
+import { drawCharacter, drawProductIcon, createSceneRenderer, loadGameAssets } from '/js/game/game-scene.mjs';
+
+const PRODUCTS = ['candy', 'chips', 'seaweed', 'soda', 'cookies', 'jelly'];
+
+function ctxOf(id) {
+  const ctx = document.getElementById(id).getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  return ctx;
+}
+
+/* ---- 旧版角色:从原仓库 sprite sheet 裁一帧 ---- */
+function drawOldCharacter() {
+  const img = new Image();
+  img.src = '/old/images/game/characters.png';
+  img.onload = () => {
+    const ctx = ctxOf('oldChar');
+    const cellH = img.height / 4;
+    const sx = 1020.5 - 64;          // DIRECTION_COLUMNS.south = 6
+    const sy = 2 * cellH;            // 正面行
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, sx, sy, 128, cellH, 128, 20, 128, cellH * 0.9);
+    ctx.fillStyle = '#8a6f52';
+    ctx.font = '12px Consolas';
+    ctx.fillText('source: 128×' + cellH.toFixed(0) + ' frame', 20, 320);
+  };
+}
+
+/* ---- 新版角色:程序化绘制,放大到同尺寸 ---- */
+function drawNewCharacter() {
+  const ctx = ctxOf('newChar');
+  ctx.save();
+  ctx.translate(192, 310);
+  ctx.scale(3.6, 3.6);
+  drawCharacter(ctx, { role: 'customer', variant: 0, direction: 'south', frame: 0, phase: 'browsing', x: 0, y: 0 }, 1);
+  ctx.restore();
+  ctx.fillStyle = '#8a6f52';
+  ctx.font = '12px Consolas';
+  ctx.fillText('head:body = 1.5:1', 20, 320);
+}
+
+/* ---- 旧版商品:从 fixtures-and-products.png 取格子 ---- */
+function drawOldProducts() {
+  const img = new Image();
+  img.src = '/old/images/game/fixtures-and-products.png';
+  img.onload = () => {
+    const ctx = ctxOf('oldProd');
+    const cells = { candy: [1, 2], chips: [2, 2], seaweed: [3, 2], soda: [0, 3], cookies: [1, 3], jelly: [2, 3] };
+    const cw = img.width / 4, ch = img.height / 4;
+    PRODUCTS.forEach((id, i) => {
+      const [col, row] = cells[id];
+      const x = 40 + (i % 3) * 110, y = 40 + Math.floor(i / 3) * 120;
+      ctx.drawImage(img, col * cw, row * ch, cw, ch, x, y, 96, 96);
+    });
+  };
+}
+
+/* ---- 新版商品:程序化绘制 ---- */
+function drawNewProducts() {
+  const ctx = ctxOf('newProd');
+  PRODUCTS.forEach((id, i) => {
+    const x = 40 + (i % 3) * 110, y = 40 + Math.floor(i / 3) * 120;
+    drawProductIcon(ctx, id, x, y, 96);
+  });
+}
+
+/* ---- 完整场景实机渲染 ---- */
+async function renderScene() {
+  const canvas = document.getElementById('scene');
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const assets = await loadGameAssets('/images/game');
+  const renderer = createSceneRenderer(canvas, assets);
+  const state = {
+    shelfInventory: { candy: 8, chips: 5, seaweed: 3, soda: 6, cookies: 4, jelly: 7 },
+    warehouseInventory: { candy: 10, chips: 8, seaweed: 4, soda: 6, cookies: 5, jelly: 9 },
+    reservedInventory: { candy: 0, chips: 0, seaweed: 0, soda: 0, cookies: 0, jelly: 0 },
+    upgrades: { shelf: 0 }
+  };
+  const customers = [
+    { id: 'a', variant: 0, request: [{ productId: 'candy', quantity: 1 }], phase: 'browsing', direction: 'east', frame: 0, x: 197, y: 205 },
+    { id: 'b', variant: 1, request: [{ productId: 'chips', quantity: 2 }], phase: 'browsing', direction: 'west', frame: 1, x: 537, y: 205 },
+    { id: 'c', variant: 2, request: [{ productId: 'soda', quantity: 1 }], phase: 'queueing', direction: 'north', frame: 0, x: 690, y: 304 }
+  ];
+  let t = 0;
+  (function frame() {
+    t += 16;
+    renderer({ customers, selectedCustomerId: null, selectedShelfId: null, state, elapsedMs: t });
+    requestAnimationFrame(frame);
+  })();
+}
+
+drawOldCharacter();
+drawNewCharacter();
+drawOldProducts();
+drawNewProducts();
+renderScene();
+</script>
+</body>
+</html>

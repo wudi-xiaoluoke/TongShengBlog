@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 文章服务实现
@@ -35,6 +36,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         this.categoryService = categoryService;
         this.markdownService = markdownService;
     }
+
+    /** 回执号字母表：去掉 0/O、1/I/L 等易混字符 */
+    private static final String CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    private static final int CODE_LENGTH = 8;
 
     @Override
     public IPage<Article> listPublished(int page, int size) {
@@ -117,30 +122,55 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         article.setStatus(ArticleStatus.PENDING);
         article.setPublishTime(null);
         article.setRejectReason(null);
+        article.setTrackingCode(uniqueTrackingCode());
         save(article);
     }
 
+    /** 生成不与现存回执号冲突的号（含逻辑删除行；32^8 空间 + UNIQUE 兜底） */
+    private String uniqueTrackingCode() {
+        for (int attempt = 0; attempt < 5; attempt++) {
+            String code = newTrackingCode();
+            if (baseMapper.countByTrackingCode(code) == 0) {
+                return code;
+            }
+        }
+        throw new IllegalStateException("回执号生成失败，请稍后再试");
+    }
+
+    private String newTrackingCode() {
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        StringBuilder sb = new StringBuilder(CODE_LENGTH);
+        for (int i = 0; i < CODE_LENGTH; i++) {
+            sb.append(CODE_ALPHABET.charAt(random.nextInt(CODE_ALPHABET.length())));
+        }
+        return sb.toString();
+    }
+
     @Override
-    public boolean approve(Long id) {
+    public boolean approve(Long id, String feedback) {
         Article article = getById(id);
         if (article == null || article.getStatus() != ArticleStatus.PENDING) {
             return false;
         }
         article.setStatus(ArticleStatus.PUBLISHED);
         article.setPublishTime(LocalDateTime.now());
+        article.setFeedback(blankToNull(feedback));
+        article.setReviewedAt(LocalDateTime.now());
         article.setRejectReason(null);
         return updateById(article);
     }
 
     @Override
-    public boolean reject(Long id, String reason) {
+    public boolean reject(Long id, String feedback) {
         Article article = getById(id);
         if (article == null || article.getStatus() != ArticleStatus.PENDING) {
             return false;
         }
         article.setStatus(ArticleStatus.REJECTED);
-        article.setRejectReason(reason);
+        article.setFeedback(blankToNull(feedback));
+        article.setReviewedAt(LocalDateTime.now());
         article.setPublishTime(null);
+        article.setRejectReason(null);
         return updateById(article);
     }
 
@@ -153,11 +183,23 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         article.setTitle(title);
         article.setContent(content);
         article.setCategoryId(categoryId);
-        // 编辑后回到待审核，需管理员重新审核发布
+        // 编辑后回到待审核，需管理员重新审核发布；旧审核附言随之作废
         article.setStatus(ArticleStatus.PENDING);
         article.setPublishTime(null);
+        article.setFeedback(null);
+        article.setReviewedAt(null);
         article.setRejectReason(null);
         return updateById(article);
+    }
+
+    /** 空串/纯空白 → null（附言选填） */
+    private String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s.trim();
+    }
+
+    @Override
+    public Article findForTracking(String code) {
+        return baseMapper.findByTrackingCodeIncludingDeleted(code);
     }
 
     @Override

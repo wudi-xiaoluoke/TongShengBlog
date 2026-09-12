@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Q 版零食店 - 视觉验证</title>
+  <link rel="stylesheet" href="/css/game.css">
+  <style>
+    body { background: #fdf3da; padding: 24px; }
+    .demo { max-width: 1180px; margin: 0 auto; background: var(--paper); border-radius: 16px; padding: 18px; box-shadow: 0 6px 0 var(--wood-mid); }
+    h2 { font-family: "Consolas", monospace; color: var(--wood-ink); }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .scene-box { background: #1e1712; border-radius: 10px; overflow: hidden; }
+  </style>
+</head>
+<body>
+<div class="demo">
+  <h2>🛍️ Q 版温馨木色零食店 — 视觉验证</h2>
+  <p>左: 角色正在浏览货架(2 个)。中: 顾客已结账(2 个)。右: 不同状态的货架显示。</p>
+  <div class="row">
+    <div class="scene-box">
+      <canvas id="c1" width="768" height="512"></canvas>
+    </div>
+    <div class="scene-box">
+      <canvas id="c2" width="768" height="512"></canvas>
+    </div>
+    <div class="scene-box">
+      <canvas id="c3" width="768" height="512"></canvas>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { createSceneRenderer, loadGameAssets } from '/js/game/game-scene.mjs';
+import { SHOP_HUB, SHELVES, SHOPKEEPER_POINT, CHECKOUT_COUNTER } from '/js/game/game-world.mjs';
+
+async function render(canvasId, customers, state, selectedShelfId, selectedCustomerId) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const assets = await loadGameAssets('/images/game');
+  const renderer = createSceneRenderer(canvas, assets);
+  function frame() {
+    renderer({
+      customers,
+      selectedCustomerId,
+      selectedShelfId,
+      state,
+      elapsedMs: performance.now()
+    });
+    requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+const baseState = {
+  shelfInventory: { candy: 8, chips: 5, seaweed: 0, soda: 0, cookies: 0, jelly: 0 },
+  warehouseInventory: { candy: 10, chips: 8, seaweed: 0, soda: 0, cookies: 0, jelly: 0 },
+  reservedInventory: { candy: 0, chips: 0, seaweed: 0, soda: 0, cookies: 0, jelly: 0 },
+  upgrades: { shelf: 0 }
+};
+
+// 场景 1: 2 个顾客(学生在左边货架, 邻居在右边货架)
+const customers1 = [
+  { id: 'c1', variant: 0, request: [{ productId: 'candy', quantity: 1 }], phase: 'browsing', direction: 'west', frame: 0, x: 197, y: 205 },
+  { id: 'c2', variant: 1, request: [{ productId: 'seaweed', quantity: 1 }], phase: 'browsing', direction: 'west', frame: 0, x: 537, y: 205 }
+];
+render('c1', customers1, baseState, null, null);
+
+// 场景 2: 店主正在收银, 1 个顾客在排队
+const customers2 = [
+  { id: 'q1', variant: 2, request: [{ productId: 'chips', quantity: 1 }], phase: 'queueing', direction: 'west', frame: 0, x: 690, y: 304 }
+];
+render('c2', customers2, baseState, null, null);
+
+// 场景 3: 不同库存状态的货架
+const customers3 = [];
+render('c3', customers3, baseState, 'shelf-candy', null);
+</script>
+</body>
+</html>

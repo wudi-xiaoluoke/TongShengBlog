@@ -60,7 +60,7 @@ class BlogApplicationTests {
                 "待审核文章不应出现在主页");
 
         // 审核通过
-        assertTrue(articleService.approve(draft.getId()));
+        assertTrue(articleService.approve(draft.getId(), null));
         Article approved = articleService.getById(draft.getId());
         assertEquals(ArticleStatus.PUBLISHED, approved.getStatus());
         assertNotNull(approved.getPublishTime());
@@ -123,7 +123,7 @@ class BlogApplicationTests {
         a.setNickname("测试");
         a.setCategoryId(1L);
         articleService.submit(a);
-        articleService.approve(a.getId());
+        articleService.approve(a.getId(), null);
 
         Article detail = articleService.getById(a.getId());
         String html = detail.getContentHtml();
@@ -151,7 +151,7 @@ class BlogApplicationTests {
         a.setContent("x");
         a.setNickname("测试");
         articleService.submit(a);
-        articleService.approve(a.getId());
+        articleService.approve(a.getId(), null);
 
         assertEquals(0L, articleService.getById(a.getId()).getViews(), "默认阅读量应为 0");
         articleService.incrementViews(a.getId());

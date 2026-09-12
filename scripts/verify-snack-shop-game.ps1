@@ -12,9 +12,7 @@ $scriptPaths = @(
 $assetPaths = @(
     'src\main\resources\static\images\game\snack-shop-empty-scene.png',
     'src\main\resources\static\images\game\shelf-empty.png',
-    'src\main\resources\static\images\game\checkout-counter.png',
-    'src\main\resources\static\images\game\characters.png',
-    'src\main\resources\static\images\game\fixtures-and-products.png'
+    'src\main\resources\static\images\game\checkout-counter.png'
 )
 
 $template = Get-Content -LiteralPath $templatePath -Encoding utf8 -Raw
@@ -49,7 +47,7 @@ if (-not (Test-Path -LiteralPath $cssPath)) {
     throw 'Game stylesheet is missing.'
 }
 $css = Get-Content -LiteralPath $cssPath -Encoding utf8 -Raw
-if (-not $css.Contains('image-rendering:pixelated')) {
+if ($css -notmatch 'image-rendering:\s*pixelated') {
     throw 'Pixelated rendering rule is missing.'
 }
 

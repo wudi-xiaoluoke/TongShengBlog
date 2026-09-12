@@ -79,6 +79,60 @@ class SessionStableHomeRandomTests {
         assertNotEquals(seedA, seedB, "不同会话应生成不同的随机种子");
     }
 
+    @Test
+    void reshuffleWithTRegeneratesSeed() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        long seedBefore = seedOf(session);
+        mockMvc.perform(get("/").param("t", "1").session(session))
+                .andExpect(status().isOk());
+        long seedAfter = Long.parseLong(String.valueOf(session.getAttribute("homeRandomSeed")));
+        assertNotEquals(seedBefore, seedAfter, "「换一批」应重新生成随机种子，换出新的文章集");
+    }
+
+    @Test
+    void plainReloadKeepsSeed() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        long seedBefore = seedOf(session);
+        mockMvc.perform(get("/").session(session))
+                .andExpect(status().isOk());
+        long seedAfter = Long.parseLong(String.valueOf(session.getAttribute("homeRandomSeed")));
+        assertEquals(seedBefore, seedAfter, "普通刷新/切页数不带 t，不应改变种子");
+    }
+
+    // ---- 「换一批」AJAX 片段接口 /home/posts ----
+
+    @Test
+    void postsFragmentReturnsOnlyCardsNotFullPage() throws Exception {
+        MvcResult r = mockMvc.perform(get("/home/posts").session(new MockHttpSession()))
+                .andExpect(status().isOk())
+                .andReturn();
+        String html = r.getResponse().getContentAsString();
+        assertFalse(html.contains("<!DOCTYPE"), "片段不应返回完整 HTML 页面");
+        assertFalse(html.contains("<html"), "片段不应返回完整 HTML 页面");
+        assertFalse(articleIds(html).isEmpty(), "片段应包含文章卡片");
+    }
+
+    @Test
+    void postsFragmentReshuffleWithTRegeneratesSeed() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        mockMvc.perform(get("/home/posts").session(session)).andExpect(status().isOk());
+        long seedBefore = Long.parseLong(String.valueOf(session.getAttribute("homeRandomSeed")));
+        mockMvc.perform(get("/home/posts").param("t", "1").session(session)).andExpect(status().isOk());
+        long seedAfter = Long.parseLong(String.valueOf(session.getAttribute("homeRandomSeed")));
+        assertNotEquals(seedBefore, seedAfter, "「换一批」片段请求应重新生成种子");
+    }
+
+    @Test
+    void postsFragmentStableWithoutT() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        List<Long> first = articleIds(mockMvc.perform(get("/home/posts").session(session))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        List<Long> second = articleIds(mockMvc.perform(get("/home/posts").session(session))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertFalse(first.isEmpty());
+        assertEquals(first, second, "不带 t 的片段请求应保持会话内顺序");
+    }
+
     private long seedOf(MockHttpSession session) throws Exception {
         render("/", session);
         return Long.parseLong(String.valueOf(session.getAttribute("homeRandomSeed")));

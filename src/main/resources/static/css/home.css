@@ -17,6 +17,81 @@ nav a:hover{color:#d1662f}
 .sticky{position:absolute;right:6px;top:70px;background:#fff9c4;box-shadow:2px 4px 8px rgba(90,70,50,.18);padding:14px 16px;transform:rotate(6deg);font-size:13px;width:130px;z-index:3}
 .sticky:before{content:'';position:absolute;top:-8px;left:20px;width:70px;height:18px;background:rgba(255,255,255,.55)}
 .sticky b{color:#d1662f}
+/* 登录便签：贴在页头左侧，与右侧黄便签对称 */
+.sticky-login{position:absolute;left:32px;top:70px;background:#ffe3ec;box-shadow:2px 4px 8px rgba(90,70,50,.18);padding:14px 16px;transform:rotate(-5deg);font-size:13px;width:150px;z-index:3}
+.sticky-login:before{content:'';position:absolute;top:-8px;left:20px;width:70px;height:18px;background:rgba(255,255,255,.55)}
+.sticky-login b{color:#c2557b}
+.sticky-login form{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.sticky-login [hidden]{display:none !important} /* display:flex/等会压过 hidden 属性，这里强制生效 */
+.sticky-login input{width:100%;border:none;border-bottom:1.5px dashed #d9a8b8;background:transparent;font-family:inherit;font-size:13px;color:#5a4632;padding:2px 2px 4px;outline:none}
+.sticky-login input::placeholder{color:#c9a0ae}
+.sticky-login input:focus{border-bottom-color:#c2557b}
+.sticky-login button{border:none;background:#f4b8c8;color:#7a3b4e;font-family:inherit;font-size:12px;font-weight:bold;border-radius:999px;padding:4px 10px;cursor:pointer;align-self:flex-end;transition:.2s}
+.sticky-login button:hover{background:#efa9bd}
+.sticky-login .login-greet{margin-top:6px;color:#7a3b4e}
+.sticky-login .login-greet .rename{border:none;background:none;color:#b06a80;font-family:inherit;font-size:11px;cursor:pointer;text-decoration:underline dashed;padding:0;margin-left:4px}
+.sticky-login .login-msg{color:#c2557b;font-size:11.5px;line-height:1.5;margin-top:4px}
+
+/* ---- 双便签登录弹层：注册 / 登录 两张彩签叠放，点击翻页切换 ---- */
+.auth-overlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(74,58,40,.4);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:auth-fade .2s ease-out}
+@keyframes auth-fade{from{opacity:0}to{opacity:1}}
+.auth-overlay[hidden]{display:none}
+.auth-cards{position:relative;width:min(520px,92vw);height:360px;perspective:1200px}
+/* 关闭按钮：一枚钉子，钉在两签左上角的重合点上，把整叠签钉住 */
+.auth-close{position:absolute;top:15px;left:calc(50% - 136px);z-index:3;width:22px;height:22px;border:none;border-radius:50%;background:rgba(255,255,255,.55);color:#b3a184;font-size:11px;line-height:22px;padding:0;cursor:pointer;transition:.2s}
+.auth-close:hover{background:#f4b8c8;color:#7a3b4e}
+
+.auth-note{position:absolute;top:26px;width:250px;padding:20px 20px 16px;background:#fdf1d8;box-shadow:3px 5px 12px rgba(74,58,40,.28);transform-origin:0 0;cursor:pointer;transition:transform .35s ease,filter .35s ease,box-shadow .35s ease}
+.auth-note .auth-tape{position:absolute;top:-10px;left:50%;width:76px;height:20px;margin-left:-38px;background:rgba(255,255,255,.6);transform:rotate(-4deg)}
+.auth-note h3{margin:0 0 6px;font-size:17px;letter-spacing:2px;color:#8a5a2e}
+.auth-note .auth-sub{margin:0 0 12px;font-size:11.5px;line-height:1.7;color:#b39a77}
+.auth-note form{display:flex;flex-direction:column;gap:9px}
+.auth-note input{width:100%;border:none;border-bottom:1.5px dashed #d9c8a8;background:rgba(255,255,255,.45);font-family:inherit;font-size:13px;color:#5a4632;padding:5px 6px;outline:none;box-sizing:border-box}
+.auth-note input:focus{border-bottom-color:#d1662f}
+.auth-note button{border:none;background:#e9b949;color:#6b4a12;font-family:inherit;font-size:12.5px;font-weight:bold;border-radius:999px;padding:6px 12px;cursor:pointer;align-self:flex-end;transition:.2s}
+.auth-note button:hover{filter:brightness(1.06)}
+.auth-note .auth-msg{min-height:16px;margin:8px 0 0;font-size:11.5px;line-height:1.5;color:#c2557b}
+/* 注册签：薄荷绿，默认在前（居中，微左倾） */
+.note-register{left:50%;margin-left:-125px;background:#dff0dc}
+.note-register h3{color:#4a6b45}
+.note-register input{border-bottom-color:#a8c4a2}
+.note-register input:focus{border-bottom-color:#5a8a52}
+.note-register button{background:#9ed094;color:#2f5229}
+/* 登录签：樱粉，默认垫在后面（同位置，只露出右上角） */
+.note-login{left:50%;margin-left:-125px;background:#ffe3ec}
+.note-login h3{color:#b0557a}
+.note-login input{border-bottom-color:#d9a8b8}
+.note-login input:focus{border-bottom-color:#c2557b}
+.note-login button{background:#f4b8c8;color:#7a3b4e}
+
+/* 前/后状态：两签左上角重合于一点（transform-origin:0 0），后签绕这个角扇形展开，沿顶边向右上露出 */
+.auth-note.is-front{z-index:2;cursor:default;box-shadow:5px 8px 18px rgba(74,58,40,.34)}
+.note-register.is-front{transform:rotate(-2deg)}
+.note-login.is-front{transform:rotate(2deg)}
+.auth-note.is-back{z-index:1;filter:brightness(.95) saturate(.9)}
+.note-register.is-back,.note-login.is-back{transform:rotate(-9deg)}
+/* 翻页动画：被点到的签绕重合角「掀起来」翻到前位（起止与前后态 transform 对齐，无跳变） */
+.auth-note.flip-in{animation:flip-to-front .45s ease}
+@keyframes flip-to-front{
+  0%{filter:brightness(.95) saturate(.9)}
+}
+.note-register.flip-in{animation-name:flip-to-front-reg}
+.note-login.flip-in{animation-name:flip-to-front-login}
+@keyframes flip-to-front-reg{
+  0%{transform:rotate(-9deg);filter:brightness(.95)}
+  45%{transform:rotate(-15deg);filter:brightness(1.03)}
+  100%{transform:rotate(-2deg)}
+}
+@keyframes flip-to-front-login{
+  0%{transform:rotate(-9deg);filter:brightness(.95)}
+  45%{transform:rotate(-15deg);filter:brightness(1.03)}
+  100%{transform:rotate(2deg)}
+}
+@media (max-width:560px){
+  .auth-cards{height:400px}
+  .auth-note{width:min(300px,86vw);margin-left:calc(min(300px,86vw)/-2)}
+  .auth-close{left:calc(50% - min(300px,86vw)/2 - 11px)}
+}
 
 /* ---- 首屏 ---- */
 .hero{padding:40px 0 16px;text-align:center}
@@ -80,6 +155,8 @@ nav a:hover{color:#d1662f}
 .guest button:hover{transform:translateY(2px);box-shadow:0 1px 0 #a3481f}
 .flash-ok{margin-top:16px;color:#3f7f3d;background:#e8f5e6;border:1px dashed #9bc48f;padding:10px 16px;border-radius:6px}
 .flash-err{margin-top:16px;color:#a3482e;background:#fbe9e4;border:1px dashed #e0a89a;padding:10px 16px;border-radius:6px}
+.guest .track-entry{display:inline-block;margin-top:14px;font-size:13px;color:#8a7355;letter-spacing:1px;border-bottom:1px dashed #c9b28c;padding-bottom:2px}
+.guest .track-entry:hover{color:#d1662f;border-bottom-color:#d1662f}
 
 /* ---- 文章详情 ---- */
 .detail{background:#fffdf4;border:1px solid #eadcc0;padding:36px 32px;margin:10px 0 20px;box-shadow:2px 3px 0 rgba(90,70,50,.12);position:relative}
@@ -123,4 +200,38 @@ footer{text-align:center;padding:10px 0 54px;color:#b39a77;font-size:12px;letter
 .detail .meta .views{color:#b39a77}
 .views-icon{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
-@media (max-width:640px){.sticky{display:none}}
+/* ---- 首页背景音乐 ---- */
+.music-toggle{
+  position:fixed;right:18px;bottom:16px;z-index:20;
+  display:grid;place-items:center;width:38px;height:38px;
+  border:0;background:#fff3b0;color:#8a6d3b;transform:rotate(6deg);
+  box-shadow:2px 3px 7px rgba(90,70,50,.2);font:inherit;cursor:pointer;
+}
+.music-toggle[hidden]{display:none}
+.music-toggle::before{
+  content:'';position:absolute;top:-5px;left:8px;width:22px;height:10px;
+  background:rgba(255,255,255,.55);transform:rotate(-5deg);
+}
+.music-toggle-icon{position:relative;line-height:1;font-size:15px;font-weight:bold}
+.music-toggle:hover,.music-toggle:focus-visible{background:#ffe998;color:#765724}
+
+/* 播放中轻柔摆动：围绕 6° 基线 ±3° 游走并带轻微浮沉，像随音乐飘动 */
+.music-toggle.music-playing{
+  animation:music-float 3.4s ease-in-out infinite;
+}
+@keyframes music-float{
+  0%  {transform:rotate(6deg) translate(0,0)}
+  15% {transform:rotate(9deg) translate(1px,0)}
+  40% {transform:rotate(5deg) translate(.5px,-1px)}
+  65% {transform:rotate(3deg) translate(-1px,0)}
+  85% {transform:rotate(7.5deg) translate(-.5px,-1px)}
+  100%{transform:rotate(6deg) translate(0,0)}
+}
+@media (prefers-reduced-motion:reduce){
+  .music-toggle.music-playing{animation:none}
+}
+
+@media (max-width:640px){
+  .sticky,.sticky-login{display:none}
+  .music-toggle{right:12px;bottom:12px;width:44px;height:44px}
+}

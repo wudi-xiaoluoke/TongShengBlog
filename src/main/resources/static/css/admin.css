@@ -75,6 +75,7 @@ td .meta{font-size:11.5px;color:#b39a77;margin-top:3px}
 .btn.del:hover{background:#eee;color:#a3482e}
 .btn.save{color:#fff;background:#d1662f;border-color:#c05a26;padding:10px 30px;font-size:14px}
 input.reason{width:120px;padding:5px 10px;font-size:12px;border:1px solid #eadcc0;border-radius:4px;background:#fffdf6}
+input.feedback{width:220px;padding:5px 10px;font-size:12px;border:1px solid #eadcc0;border-radius:4px;background:#fffdf6}
 
 /* ---- 编辑页 ---- */
 .edit-box{background:#fffdf4;border:1px solid #eadcc0;border-radius:6px;padding:30px 32px;box-shadow:2px 3px 0 rgba(90,70,50,.08);max-width:720px;margin:0 auto}
@@ -114,4 +115,5 @@ input.reason{width:120px;padding:5px 10px;font-size:12px;border:1px solid #eadcc
   .table-wrap{overflow-x:auto}
   th,td{padding:10px}
   input.reason{width:80px}
+  input.feedback{width:110px}
 }

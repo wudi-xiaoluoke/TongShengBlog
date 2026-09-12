@@ -1,0 +1,9 @@
+const $=s=>document.querySelector(s),labels=['↑ 向上 · 背面','↓ 向下 · 正面','← 向左 · 侧面','→ 向右 · 侧面'];
+$('.cards').innerHTML=labels.map((label,row)=>`<article class="card"><h2>${label}</h2><canvas width="256" height="256" data-row="${row}" aria-label="${label}行走动画"></canvas><small>8 帧循环</small></article>`).join('');
+const sheet=$('#sheet');let frame=0,playing=!matchMedia('(prefers-reduced-motion: reduce)').matches,last=0,accumulator=0;
+const syncButton=()=>{$('#play').textContent=playing?'暂停':'播放';};syncButton();
+function draw(){if(!sheet.complete||!sheet.naturalWidth)return;$('#frame').textContent=`第 ${frame+1} / 8 帧`;for(const canvas of document.querySelectorAll('canvas')){const ctx=canvas.getContext('2d'),row=Number(canvas.dataset.row);ctx.imageSmoothingEnabled=false;ctx.fillStyle='#e9eddf';ctx.fillRect(0,0,256,256);if($('#guide').checked){ctx.fillStyle='#bdc8b4';ctx.fillRect(12,243,232,1);}const x=Math.round(frame*sheet.naturalWidth/8),y=Math.round(row*sheet.naturalHeight/4),w=Math.round((frame+1)*sheet.naturalWidth/8)-x,h=Math.round((row+1)*sheet.naturalHeight/4)-y;ctx.drawImage(sheet,x,y,w,h,8,8,240,240);canvas.dataset.frame=String(frame);}}
+function pause(){playing=false;accumulator=0;syncButton();}
+$('#play').onclick=()=>{playing=!playing;accumulator=0;syncButton();};$('#previous').onclick=()=>{pause();frame=(frame+7)%8;draw();};$('#next').onclick=()=>{pause();frame=(frame+1)%8;draw();};$('#guide').onchange=draw;
+function tick(t){const delta=Math.min(100,t-last);last=t;if(playing){accumulator+=delta*Number($('#speed').value);while(accumulator>=100){frame=(frame+1)%8;accumulator-=100;}draw();}requestAnimationFrame(tick);}
+try{await sheet.decode();draw();document.body.dataset.ready='true';$('#status').textContent='样板已加载 · 可暂停、慢放或逐帧查看';requestAnimationFrame(tick);}catch{$('#status').textContent='图片加载失败，请刷新重试。';}

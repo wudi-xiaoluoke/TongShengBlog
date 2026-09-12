@@ -11,6 +11,47 @@
 
   <header th:replace="~{fragments/layout :: header}"></header>
 
+  <!-- 登录便签：写下名字点签到，弹出双便签选「注册 / 登录」 -->
+  <div class="sticky-login" id="sticky-login" th:attr="data-api=@{/api/auth}">
+    <b>留下你的名字</b>
+    <form id="login-note-form">
+      <input type="text" id="visitor-name" maxlength="16" placeholder="你的名字" autocomplete="username">
+      <button type="submit">签到 ✎</button>
+    </form>
+    <p class="login-greet" id="login-greet" hidden></p>
+  </div>
+
+  <!-- 双便签弹层：注册 / 登录，点另一张便签翻页切换 -->
+  <div class="auth-overlay" id="auth-overlay" hidden>
+    <div class="auth-cards" aria-label="注册或登录">
+      <button type="button" class="auth-close" id="auth-close" aria-label="关闭">✕</button>
+
+      <section class="auth-note note-register is-front" id="note-register">
+        <i class="auth-tape" aria-hidden="true"></i>
+        <h3>新客登记</h3>
+        <p class="auth-sub">起个名字设个密码，<br>零食店、手账、商城都能用</p>
+        <form id="register-form">
+          <input type="text" id="register-name" maxlength="16" placeholder="你的名字" autocomplete="username">
+          <input type="password" id="register-pass" maxlength="32" placeholder="设个密码（4 位以上）" autocomplete="new-password">
+          <button type="submit">登记好啦 ✎</button>
+        </form>
+        <p class="auth-msg" aria-live="polite"></p>
+      </section>
+
+      <section class="auth-note note-login is-back" id="note-login">
+        <i class="auth-tape" aria-hidden="true"></i>
+        <h3>老客回来</h3>
+        <p class="auth-sub">名字和密码对上就进门</p>
+        <form id="login-form">
+          <input type="text" id="login-name" maxlength="16" placeholder="你的名字" autocomplete="username">
+          <input type="password" id="login-pass" maxlength="32" placeholder="密码" autocomplete="current-password">
+          <button type="submit">进门 ✎</button>
+        </form>
+        <p class="auth-msg" aria-live="polite"></p>
+      </section>
+    </div>
+  </div>
+
   <div class="hero">
     <div class="b">今天，也认真过了一天 ✎</div>
     <div class="s">—— 同生 · 手写于 2026.08.09</div>
@@ -30,13 +71,13 @@
           <option value="20" th:selected="${pageSize == 20}">20 篇</option>
         </select>
       </form>
-      <button type="button" class="shuffle-btn"
-              onclick="location.href='/?size=' + document.getElementById('page-size').value + '&t=' + Date.now()">🔀 换一批</button>
+      <button type="button" class="shuffle-btn" id="shuffle-btn"
+              th:attr="data-endpoint=@{/home/posts}">🔀 换一批</button>
     </div>
   </div>
 
   <!-- 已发布文章（随机一批） -->
-  <div class="posts">
+  <div class="posts" id="posts" th:fragment="posts">
     <a class="note" th:each="n : ${articles}" th:href="@{/article/{id}(id=${n.id})}">
       <span class="tape2"></span>
       <div class="date" th:text="${#temporals.format(n.publishTime,'yyyy.MM.dd')}"></div>
@@ -65,6 +106,7 @@
   <div class="guest" id="guest">
     <div class="t">📝 留下一笔</div>
     <p>写下你的心情、故事或碎碎念，审核通过后就会出现在小本本上。</p>
+    <a class="track-entry" th:href="@{/track}">🔍 查投稿进度</a>
 
     <form method="post" th:action="@{/submit}" th:object="${submit}">
       <div class="field">
@@ -93,7 +135,16 @@
     <p class="flash-err" th:if="${error}" th:text="${error}"></p>
   </div>
 
+  <div id="home-music"
+       th:attr="data-track-one=@{/audio/mu-xin.mp3},data-track-two=@{/audio/luo-xiao-han.mp3}">
+    <button type="button" id="music-toggle" class="music-toggle"
+            aria-label="播放背景音乐" aria-pressed="false">
+      <span class="music-toggle-icon" aria-hidden="true">▶</span>
+    </button>
+  </div>
+
   <footer th:replace="~{fragments/layout :: footer}"></footer>
 </div>
+<script th:src="@{/js/home.mjs(v='20260907c')}" type="module"></script>
 </body>
 </html>

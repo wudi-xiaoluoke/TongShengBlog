@@ -34,10 +34,13 @@ public interface ArticleService extends IService<Article> {
     void submit(Article article);
 
     /** 审核通过 */
-    boolean approve(Long id);
+    boolean approve(Long id, String feedback);
 
     /** 驳回 */
-    boolean reject(Long id, String reason);
+    boolean reject(Long id, String feedback);
+
+    /** 回执查询：按回执号返回文章（含逻辑删除），无则返回 null */
+    Article findForTracking(String code);
 
     /** 编辑更新（更新后回到待审核，需重新发布） */
     boolean updateDraft(Long id, String title, String content, Long categoryId);
